@@ -1,7 +1,6 @@
 #include "BitcoinExchange.hpp"
 
 BitcoinExchange::BitcoinExchange(){
-	//read from Database to generate map
 	std::fstream database;
 	database.open("data.csv");
 
@@ -76,7 +75,7 @@ float BitcoinExchange::findRate(int date) const{
 		{
 			return(_exchangeRate.at(date));
 		}
-		catch(...)
+		catch(std::out_of_range)
 		{
 			date--;
 		}
