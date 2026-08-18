@@ -9,10 +9,11 @@ int main(int argc, char **argv){
 	PmergeMe sorter;
 
 	try{
-		sorter.parseInput(argc, argv);
-		sorter.printMain();
-		sorter.printPend();
-		sorter.sort();
+		//so
+		sorter.parseInputVector(argc, argv);
+		sorter.printChains();
+		sorter.runVector();
+		sorter.printChains();
 	}
 	catch (std::exception &e){
 		std::cerr << e.what() << std::endl;
@@ -21,10 +22,3 @@ int main(int argc, char **argv){
 	return (0);
 }
 
-void mergeSortMain(){
-	
-}
-
-void PmergeMe::run(){
-
-}

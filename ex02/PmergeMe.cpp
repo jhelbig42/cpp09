@@ -46,12 +46,13 @@ void PmergeMe::printChains(){
 	printPend();
 }
 
+//input is supposed to be positive int
 static void checkInputValue (long value){
-	if (value >= INT_MAX || value <= INT_MIN)
+	if (value >= INT_MAX || value < 0)
 		throw PmergeMe::BadInput();
 }
 
-void PmergeMe::parseInput(int argc, char **argv){
+void PmergeMe::parseInputVector(int argc, char **argv){
 	int i;
 	long value1;
 	long value2;
@@ -95,5 +96,82 @@ void PmergeMe::parseInput(int argc, char **argv){
 	catch (std::exception &e){
 		throw PmergeMe::BadInput();
 	}
+}
+
+int PmergeMe::pendingOf(std::pair<unsigned int, int> MainElem){
+	return _pend[MainElem.first];
+}
+
+void PmergeMe::runVector(){
+	_main = mergeSortVector(_main);
+	//b0 first
+	_result.push_back(pendingOf(_main[0]));
+	for (std::vector < std::pair<unsigned int, int> > ::iterator it = _main.begin() + 1; it != _main.end(); it++){
+		_result.push_back(it->second);
+	}
+}
+
+/*
+funktion merge(linkeListe, rechteListe);
+  neueListe
+  solange (linkeListe und rechteListe nicht leer)
+       falls (erstes Element der linkeListe <= erstes Element der rechteListe)
+       dann füge erstes Element linkeListe in die neueListe hinten ein und entferne es aus linkeListe
+       sonst füge erstes Element rechteListe in die neueListe hinten ein und entferne es aus rechteListe
+  solange_ende
+  solange (linkeListe nicht leer)
+       füge erstes Element linkeListe in die neueListe hinten ein und entferne es aus linkeListe
+  solange_ende
+  solange (rechteListe nicht leer)
+       füge erstes Element rechteListe in die neueListe hinten ein und entferne es aus rechteListe
+  solange_ende
+  antworte neueListe
+*/
+std::vector<std::pair <unsigned int, int> > PmergeMe::mergeVector(std::vector<std::pair<unsigned int, int> > Left, std::vector<std::pair <unsigned int, int> > Right){
+	std::vector< std::pair<unsigned int, int> > result;
+	while (!Left.empty() && !Right.empty()){
+		if (Left.front().second <= Right.front().second){
+			result.push_back(Left.front());
+			Left.erase(Left.begin());
+		}
+		else{
+			result.push_back(Right.front());
+			Right.erase(Right.begin());
+		}
+	}
+	//one of the lists is empty now
+	while (!Left.empty()){
+		result.push_back(Left.front());
+		Left.erase(Left.begin());
+	}
+	while (!Right.empty()){
+		result.push_back(Right.front());
+		Right.erase(Right.begin());
+	}
+	return result;
+}
+
+/*
+funktion mergesort(liste);
+  falls (Größe von liste <= 1) dann antworte liste
+  sonst
+     halbiere die liste in linkeListe, rechteListe
+     linkeListe = mergesort(linkeListe)
+     rechteListe = mergesort(rechteListe)
+     antworte merge(linkeListe, rechteListe)
+*/
+std::vector<std::pair <unsigned int, int> > PmergeMe::mergeSortVector(std::vector<std::pair<unsigned int, int> >Input){
+	if (Input.size() <= 1)
+		return Input;
+	
+	size_t middle = Input.size() / 2;
+	//endpoint in constructor is exclusive!
+	std::vector<std::pair <unsigned int, int> > left(Input.begin(), Input.begin() + middle);
+	std::vector<std::pair <unsigned int, int> > right(Input.begin() + middle, Input.end()); 
+	
+	left = mergeSortVector(left);
+	right = mergeSortVector(right);
+
+	return mergeVector(left, right);
 }
 
