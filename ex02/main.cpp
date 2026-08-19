@@ -1,5 +1,13 @@
 #include "PmergeMe.hpp"
 
+void printBefore(int argc, char **argv){
+	std::cout << "before sorting: " ;
+	for (int i = 1; i < argc; i++){
+		std::cout << argv[i] << " ";
+	}
+	std::cout << std::endl;	
+}
+
 int main(int argc, char **argv){
 	if (argc < 2){
 		std::cerr << "Error. Usage: ./PmergeMe [positive integers...]" << std::endl;
@@ -8,12 +16,15 @@ int main(int argc, char **argv){
 
 	PmergeMe sorter;
 
+	printBefore(argc, argv);
+
 	try{
-		//so
+		clock_t t = clock();
 		sorter.parseInputVector(argc, argv);
-		sorter.printChains();
 		sorter.runVector();
-		sorter.printChains();
+		t = clock() - t;
+		std::cout << "time it took with vectors: " << ((float)t)/CLOCKS_PER_SEC 
+			<< " seconds" <<std::endl;
 	}
 	catch (std::exception &e){
 		std::cerr << e.what() << std::endl;

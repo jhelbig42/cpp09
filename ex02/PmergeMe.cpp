@@ -7,6 +7,7 @@
 #include <cctype>
 #include <cerrno>
 
+// orthodox canonical
 PmergeMe::PmergeMe(){
 
 }
@@ -27,6 +28,9 @@ PmergeMe::~PmergeMe(){
 
 }
 
+// 
+
+// handling task with VECTOR
 void PmergeMe::printMain(){
 	std::cout << "main chain: " << std::endl;
 	for (size_t i = 0; i < _main.size(); i++){
@@ -102,13 +106,100 @@ int PmergeMe::pendingOf(std::pair<unsigned int, int> MainElem){
 	return _pend[MainElem.first];
 }
 
-void PmergeMe::runVector(){
-	_main = mergeSortVector(_main);
+/*
+sequence starts with 0 and 1, then each following number is found by 
+adding the number before it to twice the number before that
+    0, 1, 1, 3, 5, 11, 21, 43, 85, 171, 341, 683, 1365, 2731, 5461, 10923, ...
+*/
+static std::vector<int> createJacobsthal(size_t size){
+	std::vector<int> jacobsthal;
+
+	jacobsthal.push_back(0);
+	jacobsthal.push_back(1);
+	while (jacobsthal.back() < (int)size){
+		size_t last = jacobsthal.size();
+		jacobsthal.push_back(jacobsthal[last - 1] + 2 * jacobsthal[last - 2]);
+	}
+	return jacobsthal;
+}
+
+/*
+turns the Jacobsthal numbers into the order in which the pending elements
+should be inserted into the main chain
+*/
+static std::vector<int> createInsertionOrder(std::vector<int> const &jacobsthal, size_t pendSize){
+	std::vector<int> order;
+
+	for (size_t k = 2; k < jacobsthal.size(); k++){
+		int lower = jacobsthal[k - 1];
+		int upper = jacobsthal[k];
+		if ((size_t)lower >= pendSize)
+			break;
+		if ((size_t)upper > pendSize)
+			upper = (int)pendSize;
+		for (int rank = upper; rank > lower; rank--)
+			order.push_back(rank - 1);
+	}
+	return order;
+}
+
+void PmergeMe::reOrderPend(){
+	std::vector<int> newPend;
+	for (size_t i = 0; i < _main.size(); i++){
+		newPend.push_back(pendingOf(_main[i]));
+	}
+	//if there where odd elements
+	if (_pend.size()>_main.size())
+		newPend.push_back(_pend[_main.size()]);
+	_pend = newPend;
+}
+
+void PmergeMe::insertPendIntoResult(){
 	//b0 first
-	_result.push_back(pendingOf(_main[0]));
+	_result.push_back(_pend[0]);
+	//insert whole main chain
 	for (std::vector < std::pair<unsigned int, int> > ::iterator it = _main.begin() + 1; it != _main.end(); it++){
 		_result.push_back(it->second);
 	}
+	//figure insertion sequence out
+	_jacobsthalSequence = createJacobsthal(_pend.size());
+	_insertionOrder = createInsertionOrder(_jacobsthalSequence, _pend.size());
+
+	/*
+	std::cout << "insertion order: " << std::endl;
+	for (size_t i = 0; i < _insertionOrder.size(); i++){
+		std::cout  << _insertionOrder[i] << std::endl;
+	}
+	*/
+	//insert pend into result
+	int insertMax = _insertionOrder.size();
+	for (int i = 0; i < insertMax; i++){
+		int toInsert = _pend[_insertionOrder[i]];
+		std::vector<int>::iterator it = _result.begin();
+		//find correct place within main to insert the element
+		while (it != _result.end() && *it < toInsert)
+			it++;
+		_result.insert(it, toInsert);
+	}
+	/*
+	std::cout << "after insertion result: " << std::endl;
+	for (size_t i = 0; i < _result.size(); i++){
+		std::cout  << _result[i] << std::endl;
+	}
+	*/
+}
+
+void PmergeMe::runVector(){
+	_main = mergeSortVector(_main);
+	//reorder _pend
+	reOrderPend();
+	insertPendIntoResult();
+
+	std::cout << "ordered with Vectors: ";
+	for (size_t i = 0; i < _result.size(); i++){
+		std::cout  << _result[i] << " ";
+	}
+	std::cout << std::endl;
 }
 
 /*
