@@ -20,11 +20,16 @@ int main(int argc, char **argv){
 
 	try{
 		clock_t t = clock();
-		sorter.parseInputVector(argc, argv);
-		sorter.runVector();
+		int comparisons = 0;
+
+		sorter.parseInputVector(argc, argv, comparisons);
+		sorter.runVector(comparisons);
 		t = clock() - t;
-		std::cout << "time it took with vectors: " << ((float)t)/CLOCKS_PER_SEC 
+		
+		std::cout << "comparisons: " << comparisons << std::endl;
+		std::cout << "time it took with vectors: " << ((float)t)/CLOCKS_PER_SEC
 			<< " seconds" <<std::endl;
+		
 	}
 	catch (std::exception &e){
 		std::cerr << e.what() << std::endl;

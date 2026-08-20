@@ -56,7 +56,7 @@ static void checkInputValue (long value){
 		throw PmergeMe::BadInput();
 }
 
-void PmergeMe::parseInputVector(int argc, char **argv){
+void PmergeMe::parseInputVector(int argc, char **argv, int &Comparisons){
 	int i;
 	long value1;
 	long value2;
@@ -86,6 +86,7 @@ void PmergeMe::parseInputVector(int argc, char **argv){
 				_main.push_back(std::pair<unsigned int, int>((unsigned int)(i / 2), (int)value2));
 				_pend.push_back((int)value1);
 			}
+			Comparisons++;
 			i = i + 2;
 		}
 		if (argc % 2 == 0){ // odd number of argument
@@ -154,11 +155,11 @@ void PmergeMe::reOrderPend(){
 	_pend = newPend;
 }
 
-void PmergeMe::insertPendIntoResult(){
+void PmergeMe::insertPendIntoResult(int &Comparisons){
 	//b0 first
 	_result.push_back(_pend[0]);
 	//insert whole main chain
-	for (std::vector < std::pair<unsigned int, int> > ::iterator it = _main.begin() + 1; it != _main.end(); it++){
+	for (std::vector < std::pair<unsigned int, int> > ::iterator it = _main.begin(); it != _main.end(); it++){
 		_result.push_back(it->second);
 	}
 	//figure insertion sequence out
@@ -177,8 +178,11 @@ void PmergeMe::insertPendIntoResult(){
 		int toInsert = _pend[_insertionOrder[i]];
 		std::vector<int>::iterator it = _result.begin();
 		//find correct place within main to insert the element
-		while (it != _result.end() && *it < toInsert)
+		while (it != _result.end() && *it < toInsert){
+			Comparisons++;
 			it++;
+		}
+		Comparisons++;	
 		_result.insert(it, toInsert);
 	}
 	/*
@@ -189,11 +193,11 @@ void PmergeMe::insertPendIntoResult(){
 	*/
 }
 
-void PmergeMe::runVector(){
-	_main = mergeSortVector(_main);
+void PmergeMe::runVector(int &Comparisons){
+	_main = mergeSortVector(_main, Comparisons);
 	//reorder _pend
 	reOrderPend();
-	insertPendIntoResult();
+	insertPendIntoResult(Comparisons);
 
 	std::cout << "ordered with Vectors: ";
 	for (size_t i = 0; i < _result.size(); i++){
@@ -218,7 +222,7 @@ funktion merge(linkeListe, rechteListe);
   solange_ende
   antworte neueListe
 */
-std::vector<std::pair <unsigned int, int> > PmergeMe::mergeVector(std::vector<std::pair<unsigned int, int> > Left, std::vector<std::pair <unsigned int, int> > Right){
+std::vector<std::pair <unsigned int, int> > PmergeMe::mergeVector(std::vector<std::pair<unsigned int, int> > Left, std::vector<std::pair <unsigned int, int> > Right, int &Comparisons){
 	std::vector< std::pair<unsigned int, int> > result;
 	while (!Left.empty() && !Right.empty()){
 		if (Left.front().second <= Right.front().second){
@@ -229,6 +233,7 @@ std::vector<std::pair <unsigned int, int> > PmergeMe::mergeVector(std::vector<st
 			result.push_back(Right.front());
 			Right.erase(Right.begin());
 		}
+		Comparisons++;
 	}
 	//one of the lists is empty now
 	while (!Left.empty()){
@@ -251,7 +256,7 @@ funktion mergesort(liste);
      rechteListe = mergesort(rechteListe)
      antworte merge(linkeListe, rechteListe)
 */
-std::vector<std::pair <unsigned int, int> > PmergeMe::mergeSortVector(std::vector<std::pair<unsigned int, int> >Input){
+std::vector<std::pair <unsigned int, int> > PmergeMe::mergeSortVector(std::vector<std::pair<unsigned int, int> >Input, int &Comparisons){
 	if (Input.size() <= 1)
 		return Input;
 	
@@ -260,9 +265,9 @@ std::vector<std::pair <unsigned int, int> > PmergeMe::mergeSortVector(std::vecto
 	std::vector<std::pair <unsigned int, int> > left(Input.begin(), Input.begin() + middle);
 	std::vector<std::pair <unsigned int, int> > right(Input.begin() + middle, Input.end()); 
 	
-	left = mergeSortVector(left);
-	right = mergeSortVector(right);
+	left = mergeSortVector(left, Comparisons);
+	right = mergeSortVector(right, Comparisons);
 
-	return mergeVector(left, right);
+	return mergeVector(left, right, Comparisons);
 }
 

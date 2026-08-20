@@ -16,8 +16,8 @@ class PmergeMe{
 		PmergeMe &operator=(const PmergeMe &other);
 		~PmergeMe();
 
-		void parseInputVector(int argc, char **argv);
-		void runVector();
+		void parseInputVector(int argc, char **argv, int &Comparisons);
+		void runVector(int &Comparisons);
 
 		class BadInput : public std::exception{
 			public:
@@ -39,11 +39,11 @@ class PmergeMe{
 		std::vector<int> _jacobsthalSequence;
 		std::vector<int> _insertionOrder;
 	
-		static std::vector<std::pair <unsigned int, int> > mergeSortVector(std::vector<std::pair<unsigned int, int> >Input);
-		static std::vector<std::pair <unsigned int, int> > mergeVector(std::vector< std::pair<unsigned int, int> > Left, std::vector< std::pair<unsigned int, int> > Right);
+		static std::vector<std::pair <unsigned int, int> > mergeSortVector(std::vector<std::pair<unsigned int, int> >Input, int &Comparisons);
+		static std::vector<std::pair <unsigned int, int> > mergeVector(std::vector< std::pair<unsigned int, int> > Left, std::vector< std::pair<unsigned int, int> > Right, int &Comparisons);
 		int pendingOf(std::pair<unsigned int, int> MainElem);
 		void reOrderPend();
-		void insertPendIntoResult();
+		void insertPendIntoResult(int &Comparisons);
 };
 
 /*
