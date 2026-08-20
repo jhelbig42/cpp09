@@ -18,8 +18,7 @@ PmergeMe::PmergeMe(const PmergeMe &other){
 
 PmergeMe &PmergeMe::operator=(const PmergeMe &other){
 	if (this != &other){
-		_main = other._main;
-		_pend = other._pend;
+		_chain = other._chain;
 	}
 	return (*this);
 }
@@ -31,24 +30,7 @@ PmergeMe::~PmergeMe(){
 // 
 
 // handling task with VECTOR
-void PmergeMe::printMain(){
-	std::cout << "main chain: " << std::endl;
-	for (size_t i = 0; i < _main.size(); i++){
-		std::cout << "index: " << _main[i].first << " value: " << _main[i].second << std:: endl;
-	}
-}
 
-void PmergeMe::printPend(){
-	std::cout << "pend chain: " << std::endl;
-	for (size_t i = 0; i < _pend.size(); i++){
-		std::cout << "value: " << _pend[i] << std::endl;
-	}
-}
-
-void PmergeMe::printChains(){
-	printMain();
-	printPend();
-}
 
 //input is supposed to be positive int
 static void checkInputValue (long value){
@@ -79,12 +61,12 @@ void PmergeMe::parseInputVector(int argc, char **argv, int &Comparisons){
 			input.clear();
 
 			if (value1 > value2){
-				_main.push_back(std::pair<unsigned int, int>((unsigned int)(i / 2), (int)value1));
-				_pend.push_back((int)value2);
+				Elements newElem = {0, (int)value1, (int)value2};
+				_chain.push_back(newElem);
 			}
 			else{
-				_main.push_back(std::pair<unsigned int, int>((unsigned int)(i / 2), (int)value2));
-				_pend.push_back((int)value1);
+				Elements newElem = {0, (int)value2, (int)value1};
+				_chain.push_back(newElem);
 			}
 			Comparisons++;
 			i = i + 2;
@@ -95,7 +77,8 @@ void PmergeMe::parseInputVector(int argc, char **argv, int &Comparisons){
 			if (input.fail() || !input.eof())
 				throw PmergeMe::BadInput();
 			checkInputValue(value1);
-			_pend.push_back((int)value1);
+			Elements newElem = {0, -1, (int)value2};
+			_chain.push_back(newElem);
 		}
 	}
 	catch (std::exception &e){
@@ -103,15 +86,12 @@ void PmergeMe::parseInputVector(int argc, char **argv, int &Comparisons){
 	}
 }
 
-int PmergeMe::pendingOf(std::pair<unsigned int, int> MainElem){
-	return _pend[MainElem.first];
-}
-
 /*
 sequence starts with 0 and 1, then each following number is found by 
 adding the number before it to twice the number before that
     0, 1, 1, 3, 5, 11, 21, 43, 85, 171, 341, 683, 1365, 2731, 5461, 10923, ...
 */
+/*
 static std::vector<int> createJacobsthal(size_t size){
 	std::vector<int> jacobsthal;
 
@@ -123,11 +103,14 @@ static std::vector<int> createJacobsthal(size_t size){
 	}
 	return jacobsthal;
 }
+*/
 
 /*
 turns the Jacobsthal numbers into the order in which the pending elements
 should be inserted into the main chain
 */
+
+
 static std::vector<int> createInsertionOrder(std::vector<int> const &jacobsthal, size_t pendSize){
 	std::vector<int> order;
 
@@ -144,34 +127,22 @@ static std::vector<int> createInsertionOrder(std::vector<int> const &jacobsthal,
 	return order;
 }
 
-void PmergeMe::reOrderPend(){
-	std::vector<int> newPend;
-	for (size_t i = 0; i < _main.size(); i++){
-		newPend.push_back(pendingOf(_main[i]));
-	}
-	//if there where odd elements
-	if (_pend.size()>_main.size())
-		newPend.push_back(_pend[_main.size()]);
-	_pend = newPend;
-}
 
-void PmergeMe::insertPendIntoResult(int &Comparisons){
+void PmergeMe::insertPendVector(int &Comparisons){
+	//index chain
+	size_t vlen = _chain.size();
+	for (size_t i = 0; i < vlen; i++){
+		_chain[i].idx = i;
+	}
+
 	//b0 first
-	_result.push_back(_pend[0]);
-	//insert whole main chain
-	for (std::vector < std::pair<unsigned int, int> > ::iterator it = _main.begin(); it != _main.end(); it++){
-		_result.push_back(it->second);
-	}
-	//figure insertion sequence out
-	_jacobsthalSequence = createJacobsthal(_pend.size());
-	_insertionOrder = createInsertionOrder(_jacobsthalSequence, _pend.size());
+	Elements newElem(0, _chain[0].pend, -1);
+	_chain.push_front(_pend[0]);
 
-	/*
-	std::cout << "insertion order: " << std::endl;
-	for (size_t i = 0; i < _insertionOrder.size(); i++){
-		std::cout  << _insertionOrder[i] << std::endl;
-	}
-	*/
+	//figure insertion sequence out
+	_jacobsthalSequence = createJacobsthal(vlen);
+	_insertionOrder = createInsertionOrder(_jacobsthalSequence, vlen);
+
 	//insert pend into result
 	int insertMax = _insertionOrder.size();
 	for (int i = 0; i < insertMax; i++){
@@ -185,23 +156,29 @@ void PmergeMe::insertPendIntoResult(int &Comparisons){
 		Comparisons++;	
 		_result.insert(it, toInsert);
 	}
-	/*
-	std::cout << "after insertion result: " << std::endl;
-	for (size_t i = 0; i < _result.size(); i++){
-		std::cout  << _result[i] << std::endl;
-	}
-	*/
 }
 
-void PmergeMe::runVector(int &Comparisons){
-	_main = mergeSortVector(_main, Comparisons);
-	//reorder _pend
-	reOrderPend();
-	insertPendIntoResult(Comparisons);
 
-	std::cout << "ordered with Vectors: ";
-	for (size_t i = 0; i < _result.size(); i++){
-		std::cout  << _result[i] << " ";
+void PmergeMe::runVector(int &Comparisons){
+	_chain = mergeSortVector(_chain, Comparisons);
+
+	std::cout << "(main chain) ";
+	for (size_t i = 0; i < _chain.size(); i++){
+		std::cout  << _chain[i].main << " ";
+	}
+	std::cout << std::endl;
+
+	std::cout << "(pend chain) ";
+	for (size_t i = 0; i < _chain.size(); i++){
+		std::cout  << _chain[i].pend << " ";
+	}
+	std::cout << std::endl;
+
+	insertPendVector(Comparisons);
+
+	std::cout << "ordered with Vectors: (main chain) ";
+	for (size_t i = 0; i < _chain.size(); i++){
+		std::cout  << _chain[i].main << " ";
 	}
 	std::cout << std::endl;
 }
@@ -222,10 +199,10 @@ funktion merge(linkeListe, rechteListe);
   solange_ende
   antworte neueListe
 */
-std::vector<std::pair <unsigned int, int> > PmergeMe::mergeVector(std::vector<std::pair<unsigned int, int> > Left, std::vector<std::pair <unsigned int, int> > Right, int &Comparisons){
-	std::vector< std::pair<unsigned int, int> > result;
+std::vector<PmergeMe::Elements> PmergeMe::mergeVector(std::vector<Elements> Left, std::vector<Elements> Right, int &Comparisons){
+	std::vector< Elements > result;
 	while (!Left.empty() && !Right.empty()){
-		if (Left.front().second <= Right.front().second){
+		if (Left.front().main <= Right.front().main){
 			result.push_back(Left.front());
 			Left.erase(Left.begin());
 		}
@@ -256,14 +233,14 @@ funktion mergesort(liste);
      rechteListe = mergesort(rechteListe)
      antworte merge(linkeListe, rechteListe)
 */
-std::vector<std::pair <unsigned int, int> > PmergeMe::mergeSortVector(std::vector<std::pair<unsigned int, int> >Input, int &Comparisons){
+std::vector<PmergeMe::Elements> PmergeMe::mergeSortVector(std::vector<PmergeMe::Elements>Input, int &Comparisons){
 	if (Input.size() <= 1)
 		return Input;
 	
 	size_t middle = Input.size() / 2;
 	//endpoint in constructor is exclusive!
-	std::vector<std::pair <unsigned int, int> > left(Input.begin(), Input.begin() + middle);
-	std::vector<std::pair <unsigned int, int> > right(Input.begin() + middle, Input.end()); 
+	std::vector< Elements > left(Input.begin(), Input.begin() + middle);
+	std::vector< Elements > right(Input.begin() + middle, Input.end()); 
 	
 	left = mergeSortVector(left, Comparisons);
 	right = mergeSortVector(right, Comparisons);

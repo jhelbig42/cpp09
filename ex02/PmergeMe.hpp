@@ -16,6 +16,12 @@ class PmergeMe{
 		PmergeMe &operator=(const PmergeMe &other);
 		~PmergeMe();
 
+		struct Elements{
+			int idx;
+			int main;
+			int pend;
+		};
+
 		void parseInputVector(int argc, char **argv, int &Comparisons);
 		void runVector(int &Comparisons);
 
@@ -26,24 +32,15 @@ class PmergeMe{
 				}
 		};
 
-		// dev helper
-		void printMain();
-		void printPend();
-		void printChains();
-
 	private:
-		std::vector< std::pair<unsigned int, int> > _main;
-		std::vector<int> _pend;
-		std::vector<int> _result;
+		std::vector< Elements > _chain;
 		
 		std::vector<int> _jacobsthalSequence;
 		std::vector<int> _insertionOrder;
 	
-		static std::vector<std::pair <unsigned int, int> > mergeSortVector(std::vector<std::pair<unsigned int, int> >Input, int &Comparisons);
-		static std::vector<std::pair <unsigned int, int> > mergeVector(std::vector< std::pair<unsigned int, int> > Left, std::vector< std::pair<unsigned int, int> > Right, int &Comparisons);
-		int pendingOf(std::pair<unsigned int, int> MainElem);
-		void reOrderPend();
-		void insertPendIntoResult(int &Comparisons);
+		static std::vector<Elements> mergeSortVector(std::vector< Elements >Input, int &Comparisons);
+		static std::vector<Elements> mergeVector(std::vector< Elements > Left, std::vector< Elements > Right, int &Comparisons);
+		void insertPendVector(int &Comparisons);
 };
 
 /*

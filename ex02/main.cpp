@@ -25,7 +25,7 @@ int main(int argc, char **argv){
 		sorter.parseInputVector(argc, argv, comparisons);
 		sorter.runVector(comparisons);
 		t = clock() - t;
-		
+
 		std::cout << "comparisons: " << comparisons << std::endl;
 		std::cout << "time it took with vectors: " << ((float)t)/CLOCKS_PER_SEC
 			<< " seconds" <<std::endl;
