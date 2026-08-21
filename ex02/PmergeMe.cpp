@@ -28,28 +28,6 @@ PmergeMe::~PmergeMe(){
 
 }
 
-// 
-
-// handling task with VECTOR
-void PmergeMe::printMain(){
-	std::cout << "main chain: " << std::endl;
-	for (size_t i = 0; i < _main.size(); i++){
-		std::cout << "index: " << _main[i].first << " value: " << _main[i].second << std:: endl;
-	}
-}
-
-void PmergeMe::printPend(){
-	std::cout << "pend chain: " << std::endl;
-	for (size_t i = 0; i < _pend.size(); i++){
-		std::cout << "value: " << _pend[i] << std::endl;
-	}
-}
-
-void PmergeMe::printChains(){
-	printMain();
-	printPend();
-}
-
 //input is supposed to be positive int
 static void checkInputValue (long value){
 	if (value >= INT_MAX || value < 0)
@@ -156,52 +134,74 @@ void PmergeMe::reOrderPend(){
 }
 
 void PmergeMe::insertPendIntoResult(int &Comparisons){
-	//b0 first
-	_result.push_back(_pend[0]);
+	//b0 first to be _resultV[0]
+	_resultV.push_back(_pend[0]);
 	//insert whole main chain
 	for (std::vector < std::pair<unsigned int, int> > ::iterator it = _main.begin(); it != _main.end(); it++){
-		_result.push_back(it->second);
+		_resultV.push_back(it->second);
 	}
+
+	//track the CURRENT position of each original _main element
+	std::vector<unsigned int> mainPos(_main.size());
+	for (size_t i = 0; i < _main.size(); i++)
+		mainPos[i] = i + 1;
+
 	//figure insertion sequence out
 	_jacobsthalSequence = createJacobsthal(_pend.size());
 	_insertionOrder = createInsertionOrder(_jacobsthalSequence, _pend.size());
 
-	/*
-	std::cout << "insertion order: " << std::endl;
-	for (size_t i = 0; i < _insertionOrder.size(); i++){
-		std::cout  << _insertionOrder[i] << std::endl;
-	}
-	*/
-	//insert pend into result
+
+	//insert pend into result using BINARY insertion Sort
 	int insertMax = _insertionOrder.size();
+	int toInsert;
+	unsigned int index;
 	for (int i = 0; i < insertMax; i++){
-		int toInsert = _pend[_insertionOrder[i]];
-		std::vector<int>::iterator it = _result.begin();
-		//find correct place within main to insert the element
-		while (it != _result.end() && *it < toInsert){
+		index = _insertionOrder[i];
+		toInsert = _pend[index];
+
+		// if there is an originally unpaired element, it can fit anywhere
+		// if it was paired before, it has an upper bound given by index
+		unsigned int bound;
+		if (index < mainPos.size())
+			bound = mainPos[index];
+		else
+			bound = _resultV.size();
+		
+		unsigned int lo = 0;
+		unsigned int hi = bound;
+		while (lo < hi){
+			unsigned int mid = lo + (hi - lo) / 2;
+			if (_resultV[mid] < toInsert)
+				lo = mid + 1;
+			else
+				hi = mid;
 			Comparisons++;
-			it++;
 		}
-		Comparisons++;	
-		_result.insert(it, toInsert);
+
+		_resultV.insert(_resultV.begin() + lo, toInsert);
+		
+		//keeping track of the current positions of original _main elements
+		//everything at or after lo just shifted right by one
+		for (size_t j = 0; j < mainPos.size(); j++)
+			if (mainPos[j] >= lo)
+				mainPos[j]++;
 	}
 	/*
 	std::cout << "after insertion result: " << std::endl;
-	for (size_t i = 0; i < _result.size(); i++){
-		std::cout  << _result[i] << std::endl;
+	for (size_t i = 0; i < _resultV.size(); i++){
+		std::cout  << _resultV[i] << std::endl;
 	}
 	*/
 }
 
 void PmergeMe::runVector(int &Comparisons){
 	_main = mergeSortVector(_main, Comparisons);
-	//reorder _pend
 	reOrderPend();
 	insertPendIntoResult(Comparisons);
 
 	std::cout << "ordered with Vectors: ";
-	for (size_t i = 0; i < _result.size(); i++){
-		std::cout  << _result[i] << " ";
+	for (size_t i = 0; i < _resultV.size(); i++){
+		std::cout  << _resultV[i] << " ";
 	}
 	std::cout << std::endl;
 }
@@ -271,3 +271,21 @@ std::vector<std::pair <unsigned int, int> > PmergeMe::mergeSortVector(std::vecto
 	return mergeVector(left, right, Comparisons);
 }
 
+//STATIC HELPERS
+
+//sum(ceil_log2(3 * k) - 2 for k in range(1, n + 1))
+int PmergeMe::worstCaseComparisons(int nb){
+	int sum = 0;
+	for (int k = 1; k <= nb; k++){
+		sum += ceil((log(3*k) / log(2)) - 2);
+	}
+	return sum;
+}
+
+void PmergeMe::printBefore(int argc, char **argv){
+	std::cout << "before sorting: " ;
+	for (int i = 1; i < argc; i++){
+		std::cout << argv[i] << " ";
+	}
+	std::cout << std::endl;	
+}

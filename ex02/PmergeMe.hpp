@@ -2,6 +2,7 @@
 # define PMERGEME_HPP
 
 #include <ctime>
+#include <math.h>
 #include <vector>
 #include <list>
 #include <utility>
@@ -26,15 +27,15 @@ class PmergeMe{
 				}
 		};
 
-		// dev helper
-		void printMain();
-		void printPend();
-		void printChains();
+		//static helpers
+		static int worstCaseComparisons(int nb);
+		static void printBefore(int argc, char **argv);
 
 	private:
+		//vector solution
 		std::vector< std::pair<unsigned int, int> > _main;
 		std::vector<int> _pend;
-		std::vector<int> _result;
+		std::vector<int> _resultV;
 		
 		std::vector<int> _jacobsthalSequence;
 		std::vector<int> _insertionOrder;
@@ -44,6 +45,7 @@ class PmergeMe{
 		int pendingOf(std::pair<unsigned int, int> MainElem);
 		void reOrderPend();
 		void insertPendIntoResult(int &Comparisons);
+
 };
 
 /*
