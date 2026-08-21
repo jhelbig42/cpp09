@@ -14,7 +14,7 @@ int main(int argc, char **argv){
 		clock_t t = clock();
 		int comparisons = 0;
 
-		sorter.parseInputVector(argc, argv, comparisons);
+		sorter.parseInputVector(argc, argv);
 		sorter.runVector(comparisons);
 		t = clock() - t;
 		

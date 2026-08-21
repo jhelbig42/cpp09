@@ -20,7 +20,6 @@ PmergeMe::PmergeMe(const PmergeMe &other){
 PmergeMe &PmergeMe::operator=(const PmergeMe &other){
 	if (this != &other){
 		_main = other._main;
-		_pendV = other._pendV;
 		_resultV = other._resultV;
 		//NB: _mainL.first iterators still point into other._pendL after this
 		//copy, not into the freshly copied _pendL below. Fine as long as
@@ -44,46 +43,24 @@ static void checkInputValue (long value){
 		throw PmergeMe::BadInput();
 }
 
-void PmergeMe::parseInputVector(int argc, char **argv, int &Comparisons){
-	int i;
-	long value1;
-	long value2;
+//loads the raw values into _main, one per original argument, each keyed by
+//its own index - no pairing and no comparisons here. fordJohnsonSortVector's
+//top-level call does that pairing itself (same as every recursion level
+//below it), so there's exactly one place that builds pairs and inserts pend,
+//instead of parsing doing it once and runVector redoing it for the outermost
+//level
+void PmergeMe::parseInputVector(int argc, char **argv){
+	long value;
 	std::stringstream input;
-	i = 1;
 	try{
-		while (i < argc - 1){
+		for (int i = 1; i < argc; i++){
 			input.str(argv[i]);
-			input >> value1;
+			input >> value;
 			if (input.fail() || !input.eof())
 				throw PmergeMe::BadInput();
-			checkInputValue(value1);
+			checkInputValue(value);
 			input.clear();
-
-			input.str(argv[i + 1]);
-			input >> value2;
-			if (input.fail() || !input.eof())
-				throw PmergeMe::BadInput();
-			checkInputValue(value2);
-			input.clear();
-
-			if (value1 > value2){
-				_main.push_back(std::pair<unsigned int, int>((unsigned int)(i / 2), (int)value1));
-				_pendV.push_back((int)value2);
-			}
-			else{
-				_main.push_back(std::pair<unsigned int, int>((unsigned int)(i / 2), (int)value2));
-				_pendV.push_back((int)value1);
-			}
-			Comparisons++;
-			i = i + 2;
-		}
-		if (argc % 2 == 0){ // odd number of argument
-			input.str(argv[argc - 1]);
-			input >> value1;
-			if (input.fail() || !input.eof())
-				throw PmergeMe::BadInput();
-			checkInputValue(value1);
-			_pendV.push_back((int)value1);
+			_main.push_back(std::pair<unsigned int, int>((unsigned int)(i - 1), (int)value));
 		}
 	}
 	catch (std::exception &e){
@@ -145,10 +122,6 @@ void PmergeMe::parseInputList(int argc, char **argv, int &Comparisons){
 	}
 }
 
-int PmergeMe::pendingOf(std::pair<unsigned int, int> MainElem){
-	return _pendV[MainElem.first];
-}
-
 //_pendL has no random access, but MainElem.first already IS an iterator into
 //_pendL (captured in parseInputList), so the lookup is a plain O(1) dereference
 int PmergeMe::pendingOfL(std::pair<std::list<int>::iterator, int> MainElem){
@@ -192,17 +165,6 @@ static std::vector<int> createInsertionOrder(std::vector<int> const &jacobsthal,
 	return order;
 }
 
-void PmergeMe::reOrderPend(){
-	std::vector<int> newPend;
-	for (size_t i = 0; i < _main.size(); i++){
-		newPend.push_back(pendingOf(_main[i]));
-	}
-	//if there where odd elements
-	if (_pendV.size()>_main.size())
-		newPend.push_back(_pendV[_main.size()]);
-	_pendV = newPend;
-}
-
 void PmergeMe::reOrderPendL(){
 	std::list<int> newPend;
 	for (std::list< std::pair<std::list<int>::iterator, int> >::iterator it = _mainL.begin(); it != _mainL.end(); it++){
@@ -215,68 +177,7 @@ void PmergeMe::reOrderPendL(){
 	_pendL = newPend;
 }
 
-void PmergeMe::insertPendIntoResult(int &Comparisons){
-	//b0 first to be _resultV[0]
-	_resultV.push_back(_pendV[0]);
-	//insert whole main chain
-	for (std::vector < std::pair<unsigned int, int> > ::iterator it = _main.begin(); it != _main.end(); it++){
-		_resultV.push_back(it->second);
-	}
-
-	//track the CURRENT position of each original _main element
-	std::vector<unsigned int> mainPos(_main.size());
-	for (size_t i = 0; i < _main.size(); i++)
-		mainPos[i] = i + 1;
-
-	//figure insertion sequence out
-	_jacobsthalSequence = createJacobsthal(_pendV.size());
-	_insertionOrder = createInsertionOrder(_jacobsthalSequence, _pendV.size());
-
-
-	//insert pend into result using BINARY insertion Sort
-	int insertMax = _insertionOrder.size();
-	int toInsert;
-	unsigned int index;
-	for (int i = 0; i < insertMax; i++){
-		index = _insertionOrder[i];
-		toInsert = _pendV[index];
-
-		// if there is an originally unpaired element, it can fit anywhere
-		// if it was paired before, it has an upper bound given by index
-		unsigned int bound;
-		if (index < mainPos.size())
-			bound = mainPos[index];
-		else
-			bound = _resultV.size();
-		
-		unsigned int lo = 0;
-		unsigned int hi = bound;
-		while (lo < hi){
-			unsigned int mid = lo + (hi - lo) / 2;
-			if (_resultV[mid] < toInsert)
-				lo = mid + 1;
-			else
-				hi = mid;
-			Comparisons++;
-		}
-
-		_resultV.insert(_resultV.begin() + lo, toInsert);
-		
-		//keeping track of the current positions of original _main elements
-		//everything at or after lo just shifted right by one
-		for (size_t j = 0; j < mainPos.size(); j++)
-			if (mainPos[j] >= lo)
-				mainPos[j]++;
-	}
-	/*
-	std::cout << "after insertion result: " << std::endl;
-	for (size_t i = 0; i < _resultV.size(); i++){
-		std::cout  << _resultV[i] << std::endl;
-	}
-	*/
-}
-
-//the real fork from insertPendIntoResult: mainPos tracks iterators into
+//the real fork from insertPendJacobsthal: mainPos tracks iterators into
 //_resultL instead of indices. List insertion never invalidates other
 //iterators, so those tracked positions stay correct for free after every
 //insert - no "shift everything >= lo" loop needed.
@@ -347,9 +248,10 @@ void PmergeMe::insertPendIntoResultL(int &Comparisons){
 }
 
 void PmergeMe::runVector(int &Comparisons){
-	_main = mergeSortVector(_main, Comparisons);
-	reOrderPend();
-	insertPendIntoResult(Comparisons);
+
+	_main = fordJohnsonSortVector(_main, _main.size(), Comparisons);
+	for (size_t i = 0; i < _main.size(); i++)
+		_resultV.push_back(_main[i].second);
 
 	std::cout << "ordered with Vectors: ";
 	for (size_t i = 0; i < _resultV.size(); i++){
@@ -370,6 +272,117 @@ void PmergeMe::runList(int &Comparisons){
 	std::cout << std::endl;
 }
 
+/*
+Plain merge sort on the main chain is NOT comparison-optimal: its comparison
+count depends on split sizes/input order and can drift above the theoretical
+Ford-Johnson worst case F(n) = worstCaseComparisons(n) - which the 42 eval
+treats as a hard bug (exceeding F(n), even by 1, even rarely, means the
+algorithm isn't really Ford-Johnson). So the main chain has to be sorted by
+recursively applying the SAME merge-insertion procedure to itself, not by a
+generic mergesort. This is that: it replaces mergeSortVector+mergeVector for
+runVector, kept below unchanged for comparison.
+
+Chain keeps the same (originalIndex, value) shape at every depth; .first
+(range [0, totalPend), one entry per raw input value) rides through every
+recursion level untouched - never inspected or reassigned, only ever moved
+as part of a whole pair. The very first call IS the pairing step too: _main
+arrives from parseInputVector unpaired, one (index, value) per argument, so
+this level's own winner/loser pairing below is what parsing used to do
+separately. Each level's OWN pairing needs its own bookkeeping to survive the
+recursive sort scrambling winners' order: loserOf is a plain vector sized to
+totalPend, indexed directly by winner.first (already a unique index in that
+exact range, at every depth, since it's always a subset of the original
+indices) - so no map, just direct O(1) indexing. It's rebuilt fresh per call
+and fully consumed before returning, so nesting depth never leaks into the
+data, and there's no separate top-level pend to rebuild afterwards: the
+outermost call's own unwind IS the final insertion.
+*/
+std::vector<std::pair <unsigned int, int> > PmergeMe::fordJohnsonSortVector(std::vector<std::pair<unsigned int, int> > Chain, size_t totalPend, int &Comparisons){
+	if (Chain.size() <= 1)
+		return Chain;
+
+	std::vector<std::pair<unsigned int, int> > winners;
+	std::vector<std::pair<unsigned int, int> > loserOf(totalPend);
+	bool hasOdd = (Chain.size() % 2 == 1);
+	size_t paired = hasOdd ? Chain.size() - 1 : Chain.size();
+
+	for (size_t i = 0; i < paired; i += 2){
+		std::pair<unsigned int, int> winner;
+		std::pair<unsigned int, int> loser;
+		if (Chain[i].second > Chain[i + 1].second){
+			winner = Chain[i];
+			loser = Chain[i + 1];
+		}
+		else{
+			winner = Chain[i + 1];
+			loser = Chain[i];
+		}
+		Comparisons++;
+		loserOf[winner.first] = loser;
+		winners.push_back(winner);
+	}
+
+	//recursively Ford-Johnson-sort the winners; .first rides along untouched
+	winners = fordJohnsonSortVector(winners, totalPend, Comparisons);
+
+	//reorder this level's losers to match the now-sorted winners
+	std::vector<std::pair<unsigned int, int> > pend;
+	for (size_t i = 0; i < winners.size(); i++)
+		pend.push_back(loserOf[winners[i].first]);
+	if (hasOdd)
+		pend.push_back(Chain.back());
+
+	return insertPendJacobsthal(winners, pend, Comparisons);
+}
+
+//Jacobsthal-order binary insertion of pend into a sorted main chain, used by
+//every fordJohnsonSortVector recursion level - including the outermost one,
+//which is also where the original parse-time losers get inserted - so
+//there's exactly one implementation of this step at any depth
+std::vector<std::pair <unsigned int, int> > PmergeMe::insertPendJacobsthal(std::vector<std::pair<unsigned int, int> > const &main, std::vector<std::pair<unsigned int, int> > const &pend, int &Comparisons){
+	std::vector<std::pair<unsigned int, int> > result;
+	result.push_back(pend[0]);
+	for (size_t i = 0; i < main.size(); i++)
+		result.push_back(main[i]);
+
+	std::vector<unsigned int> mainPos(main.size());
+	for (size_t i = 0; i < main.size(); i++)
+		mainPos[i] = i + 1;
+
+	std::vector<int> jacobsthal = createJacobsthal(pend.size());
+	std::vector<int> insertionOrder = createInsertionOrder(jacobsthal, pend.size());
+
+	for (size_t k = 0; k < insertionOrder.size(); k++){
+		unsigned int index = insertionOrder[k];
+		std::pair<unsigned int, int> toInsert = pend[index];
+
+		unsigned int bound;
+		if (index < mainPos.size())
+			bound = mainPos[index];
+		else
+			bound = result.size();
+
+		unsigned int lo = 0;
+		unsigned int hi = bound;
+		while (lo < hi){
+			unsigned int mid = lo + (hi - lo) / 2;
+			if (result[mid].second < toInsert.second)
+				lo = mid + 1;
+			else
+				hi = mid;
+			Comparisons++;
+		}
+		result.insert(result.begin() + lo, toInsert);
+		for (size_t j = 0; j < mainPos.size(); j++)
+			if (mainPos[j] >= lo)
+				mainPos[j]++;
+	}
+
+	return result;
+}
+
+//kept for comparison - see fordJohnsonSortVector above, which runVector now
+//actually calls; mergeVector/mergeSortVector below are unused but untouched
 /*
 funktion merge(linkeListe, rechteListe);
   neueListe

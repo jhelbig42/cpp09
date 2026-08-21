@@ -17,7 +17,7 @@ class PmergeMe{
 		PmergeMe &operator=(const PmergeMe &other);
 		~PmergeMe();
 
-		void parseInputVector(int argc, char **argv, int &Comparisons);
+		void parseInputVector(int argc, char **argv);
 		void runVector(int &Comparisons);
 
 		void parseInputList(int argc, char **argv, int &Comparisons);
@@ -37,14 +37,17 @@ class PmergeMe{
 	private:
 		//vector solution
 		std::vector< std::pair<unsigned int, int> > _main;
-		std::vector<int> _pendV;
 		std::vector<int> _resultV;
 
+		//real recursive Ford-Johnson sort, used by runVector; kept alongside
+		//mergeSortVector/mergeVector below (unused now, left for comparison)
+		static std::vector<std::pair <unsigned int, int> > fordJohnsonSortVector(std::vector<std::pair<unsigned int, int> > Chain, size_t totalPend, int &Comparisons);
 		static std::vector<std::pair <unsigned int, int> > mergeSortVector(std::vector<std::pair<unsigned int, int> >Input, int &Comparisons);
 		static std::vector<std::pair <unsigned int, int> > mergeVector(std::vector< std::pair<unsigned int, int> > Left, std::vector< std::pair<unsigned int, int> > Right, int &Comparisons);
-		int pendingOf(std::pair<unsigned int, int> MainElem);
-		void reOrderPend();
-		void insertPendIntoResult(int &Comparisons);
+		//Jacobsthal-order binary insertion of pend into a sorted main chain;
+		//shared by fordJohnsonSortVector's recursive levels and runVector's
+		//top level, so there's exactly one implementation of this step
+		static std::vector<std::pair <unsigned int, int> > insertPendJacobsthal(std::vector<std::pair<unsigned int, int> > const &main, std::vector<std::pair<unsigned int, int> > const &pend, int &Comparisons);
 
 		//list solution
 		//pair.first is an iterator into _pendL rather than an index: a list
