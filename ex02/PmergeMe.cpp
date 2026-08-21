@@ -22,12 +22,11 @@ PmergeMe &PmergeMe::operator=(const PmergeMe &other){
 		_main = other._main;
 		_pendV = other._pendV;
 		_resultV = other._resultV;
-		//NB: _mainL.first iterators still point into other._pendL after this
-		//copy, not into the freshly copied _pendL below. Fine as long as
-		//PmergeMe is only copied before parseInputList has populated it.
+
 		_mainL = other._mainL;
 		_pendL = other._pendL;
 		_resultL = other._resultL;
+
 		_jacobsthalSequence = other._jacobsthalSequence;
 		_insertionOrder = other._insertionOrder;
 	}
@@ -44,6 +43,7 @@ static void checkInputValue (long value){
 		throw PmergeMe::BadInput();
 }
 
+//_main saves the vector index of the corresponding _pend element for later access
 void PmergeMe::parseInputVector(int argc, char **argv, int &Comparisons){
 	int i;
 	long value1;
@@ -91,9 +91,7 @@ void PmergeMe::parseInputVector(int argc, char **argv, int &Comparisons){
 	}
 }
 
-//same parsing logic as parseInputVector, but the losing value goes into
-//_pendL first so its iterator can be captured immediately and stored
-//alongside the winning value in _mainL
+//as list are not indexed, _main saved the iterator/pointer to the correspoing _pend element
 void PmergeMe::parseInputList(int argc, char **argv, int &Comparisons){
 	int i;
 	long value1;
@@ -119,6 +117,7 @@ void PmergeMe::parseInputList(int argc, char **argv, int &Comparisons){
 			if (value1 > value2){
 				_pendL.push_back((int)value2);
 				std::list<int>::iterator pendIt = _pendL.end();
+				//saving the iterator/the pointer to the pending element
 				--pendIt;
 				_mainL.push_back(std::pair<std::list<int>::iterator, int>(pendIt, (int)value1));
 			}
@@ -145,12 +144,12 @@ void PmergeMe::parseInputList(int argc, char **argv, int &Comparisons){
 	}
 }
 
+// _pendV element reachable by index
 int PmergeMe::pendingOf(std::pair<unsigned int, int> MainElem){
 	return _pendV[MainElem.first];
 }
 
-//_pendL has no random access, but MainElem.first already IS an iterator into
-//_pendL (captured in parseInputList), so the lookup is a plain O(1) dereference
+// _pendL elemeent 
 int PmergeMe::pendingOfL(std::pair<std::list<int>::iterator, int> MainElem){
 	return *(MainElem.first);
 }
@@ -441,12 +440,12 @@ funktion mergesort(liste);
 std::vector<std::pair <unsigned int, int> > PmergeMe::mergeSortVector(std::vector<std::pair<unsigned int, int> >Input, int &Comparisons){
 	if (Input.size() <= 1)
 		return Input;
-	
+
 	size_t middle = Input.size() / 2;
 	//endpoint in constructor is exclusive!
 	std::vector<std::pair <unsigned int, int> > left(Input.begin(), Input.begin() + middle);
-	std::vector<std::pair <unsigned int, int> > right(Input.begin() + middle, Input.end()); 
-	
+	std::vector<std::pair <unsigned int, int> > right(Input.begin() + middle, Input.end());
+
 	left = mergeSortVector(left, Comparisons);
 	right = mergeSortVector(right, Comparisons);
 

@@ -1,5 +1,7 @@
 #include "PmergeMe.hpp"
 
+// ./PmergeMe $(shuf -i 0-10000 -n 20)
+
 int main(int argc, char **argv){
 	if (argc < 2){
 		std::cerr << "Error. Usage: ./PmergeMe [positive integers...]" << std::endl;
@@ -18,7 +20,7 @@ int main(int argc, char **argv){
 		sorter.runVector(comparisons);
 		t = clock() - t;
 		
-		std::cout << "comparisons: " << comparisons << std::endl;
+		std::cout << "comparisons using vector: " << comparisons << std::endl;
 		std::cout << "time it took with vectors: " << ((float)t)/CLOCKS_PER_SEC
 			<< " seconds" <<std::endl;
 		
@@ -37,7 +39,7 @@ int main(int argc, char **argv){
 		sorter.runList(comparisons);
 		t = clock() - t;
 
-		std::cout << "comparisons: " << comparisons << std::endl;
+		std::cout << "comparisons using list: " << comparisons << std::endl;
 		std::cout << "time it took with lists: " << ((float)t)/CLOCKS_PER_SEC
 			<< " seconds" <<std::endl;
 
