@@ -19,14 +19,6 @@ PmergeMe::PmergeMe(const PmergeMe &other){
 
 PmergeMe &PmergeMe::operator=(const PmergeMe &other){
 	if (this != &other){
-		_main = other._main;
-		_pendV = other._pendV;
-		_resultV = other._resultV;
-
-		_mainL = other._mainL;
-		_pendL = other._pendL;
-		_resultL = other._resultL;
-
 		_jacobsthalSequence = other._jacobsthalSequence;
 		_insertionOrder = other._insertionOrder;
 	}
@@ -44,115 +36,30 @@ static void checkInputValue (long value){
 }
 
 //_main saves the vector index of the corresponding _pend element for later access
-void PmergeMe::parseInputVector(int argc, char **argv, int &Comparisons){
+std::vector<int> PmergeMe::parseInputVector(int argc, char **argv){
 	int i;
 	long value1;
-	long value2;
 	std::stringstream input;
+	std::vector<int> start;
 	i = 1;
 	try{
-		while (i < argc - 1){
+		while (i < argc){
 			input.str(argv[i]);
 			input >> value1;
 			if (input.fail() || !input.eof())
 				throw PmergeMe::BadInput();
 			checkInputValue(value1);
 			input.clear();
-
-			input.str(argv[i + 1]);
-			input >> value2;
-			if (input.fail() || !input.eof())
-				throw PmergeMe::BadInput();
-			checkInputValue(value2);
-			input.clear();
-
-			if (value1 > value2){
-				_main.push_back(std::pair<unsigned int, int>((unsigned int)(i / 2), (int)value1));
-				_pendV.push_back((int)value2);
-			}
-			else{
-				_main.push_back(std::pair<unsigned int, int>((unsigned int)(i / 2), (int)value2));
-				_pendV.push_back((int)value1);
-			}
-			Comparisons++;
-			i = i + 2;
-		}
-		if (argc % 2 == 0){ // odd number of argument
-			input.str(argv[argc - 1]);
-			input >> value1;
-			if (input.fail() || !input.eof())
-				throw PmergeMe::BadInput();
-			checkInputValue(value1);
-			_pendV.push_back((int)value1);
+			start.push_back(value1);
+			i++;
 		}
 	}
 	catch (std::exception &e){
 		throw PmergeMe::BadInput();
 	}
+	return (start);
 }
 
-//as list are not indexed, _main saved the iterator/pointer to the correspoing _pend element
-void PmergeMe::parseInputList(int argc, char **argv, int &Comparisons){
-	int i;
-	long value1;
-	long value2;
-	std::stringstream input;
-	i = 1;
-	try{
-		while (i < argc - 1){
-			input.str(argv[i]);
-			input >> value1;
-			if (input.fail() || !input.eof())
-				throw PmergeMe::BadInput();
-			checkInputValue(value1);
-			input.clear();
-
-			input.str(argv[i + 1]);
-			input >> value2;
-			if (input.fail() || !input.eof())
-				throw PmergeMe::BadInput();
-			checkInputValue(value2);
-			input.clear();
-
-			if (value1 > value2){
-				_pendL.push_back((int)value2);
-				std::list<int>::iterator pendIt = _pendL.end();
-				//saving the iterator/the pointer to the pending element
-				--pendIt;
-				_mainL.push_back(std::pair<std::list<int>::iterator, int>(pendIt, (int)value1));
-			}
-			else{
-				_pendL.push_back((int)value1);
-				std::list<int>::iterator pendIt = _pendL.end();
-				--pendIt;
-				_mainL.push_back(std::pair<std::list<int>::iterator, int>(pendIt, (int)value2));
-			}
-			Comparisons++;
-			i = i + 2;
-		}
-		if (argc % 2 == 0){ // odd number of argument
-			input.str(argv[argc - 1]);
-			input >> value1;
-			if (input.fail() || !input.eof())
-				throw PmergeMe::BadInput();
-			checkInputValue(value1);
-			_pendL.push_back((int)value1);
-		}
-	}
-	catch (std::exception &e){
-		throw PmergeMe::BadInput();
-	}
-}
-
-// _pendV element reachable by index
-int PmergeMe::pendingOf(std::pair<unsigned int, int> MainElem){
-	return _pendV[MainElem.first];
-}
-
-// _pendL elemeent 
-int PmergeMe::pendingOfL(std::pair<std::list<int>::iterator, int> MainElem){
-	return *(MainElem.first);
-}
 
 /*
 sequence starts with 0 and 1, then each following number is found by 
@@ -191,166 +98,112 @@ static std::vector<int> createInsertionOrder(std::vector<int> const &jacobsthal,
 	return order;
 }
 
-void PmergeMe::reOrderPend(){
-	std::vector<int> newPend;
-	for (size_t i = 0; i < _main.size(); i++){
-		newPend.push_back(pendingOf(_main[i]));
-	}
-	//if there where odd elements
-	if (_pendV.size()>_main.size())
-		newPend.push_back(_pendV[_main.size()]);
-	_pendV = newPend;
+
+std::vector<int> PmergeMe::insertPendIntoResult(int &Comparisons, const std::vector<int>& Main, const std::vector<int>& Pend) {
+    
+    if (Pend.empty()) 
+		return Main;
+
+	std::vector<int> result;
+
+    // create base result, Main is ordered, Pend[0] is smaller than Main[0] by pairing
+    result.push_back(Pend[0]);
+    for (size_t i = 0; i < Main.size(); i++)
+        result.push_back(Main[i]);
+
+    // Track the CURRENT index position of each original main element in 'result'
+    std::vector<unsigned int> mainPos(Main.size());
+    for (size_t i = 0; i < Main.size(); i++)
+        mainPos[i] = i + 1; // Shifted by 1 because Pend[0] was prepended
+
+    // Generate Jacobsthal insertion order for remaining pend elements
+    std::vector<int> jacobsthalSeq = createJacobsthal(Pend.size());
+    std::vector<int> insertionOrder = createInsertionOrder(jacobsthalSeq, Pend.size());
+
+    // Binary insert each element from Pend into 'result'
+    for (size_t i = 0; i < insertionOrder.size(); i++) {
+        size_t index = insertionOrder[i];
+        if (index == 0) 
+			continue; // Pend[0] is already placed
+
+        int toInsert = Pend[index];
+
+        // Upper bound: If index exists in mainPos, we only search up to its paired main element
+        unsigned int bound;
+        if (index < mainPos.size())
+            bound = mainPos[index];
+        else
+            bound = result.size();
+
+        // Binary search within [0, bound)
+        unsigned int lo = 0;
+        unsigned int hi = bound;
+        while (lo < hi) {
+            unsigned int mid = lo + (hi - lo) / 2;
+            Comparisons++;
+            if (result[mid] < toInsert)
+                lo = mid + 1;
+            else
+                hi = mid;
+        }
+
+        result.insert(result.begin() + lo, toInsert);
+
+        // Update tracking positions for Main elements shifted by the insertion
+        for (size_t j = 0; j < mainPos.size(); j++) {
+            if (mainPos[j] >= lo)
+                mainPos[j]++;
+        }
+    }
+    return result;
 }
 
+std::vector<int> PmergeMe::sortVector(std::vector<int> Incoming, int &Comparisons) {
+    uint inLen = Incoming.size();
+    if (inLen <= 1)
+        return Incoming;
 
-void PmergeMe::insertPendIntoResult(int &Comparisons){
-	//b0 first to be _resultV[0]
-	_resultV.push_back(_pendV[0]);
-	//insert whole main chain
-	for (std::vector < std::pair<unsigned int, int> > ::iterator it = _main.begin(); it != _main.end(); it++){
-		_resultV.push_back(it->second);
-	}
+    std::vector<std::pair<int, int> > pairs;
+    std::vector<int> main_unsorted;
 
-	//track the CURRENT position of each original _main element
-	std::vector<unsigned int> mainPos(_main.size());
-	for (size_t i = 0; i < _main.size(); i++)
-		mainPos[i] = i + 1;
-
-	//figure insertion sequence out
-	_jacobsthalSequence = createJacobsthal(_pendV.size());
-	_insertionOrder = createInsertionOrder(_jacobsthalSequence, _pendV.size());
-
-
-	//insert pend into result using BINARY insertion Sort
-	int insertMax = _insertionOrder.size();
-	int toInsert;
-	unsigned int index;
-	for (int i = 0; i < insertMax; i++){
-		index = _insertionOrder[i];
-		toInsert = _pendV[index];
-
-		// if there is an originally unpaired element, it can fit anywhere
-		// if it was paired before, it has an upper bound given by index
-		unsigned int bound;
-		if (index < mainPos.size())
-			bound = mainPos[index];
-		else
-			bound = _resultV.size();
-		
-		unsigned int lo = 0;
-		unsigned int hi = bound;
-		while (lo < hi){
-			unsigned int mid = lo + (hi - lo) / 2;
-			if (_resultV[mid] < toInsert)
-				lo = mid + 1;
-			else
-				hi = mid;
-			Comparisons++;
-		}
-
-		_resultV.insert(_resultV.begin() + lo, toInsert);
-		
-		//keeping track of the current positions of original _main elements
-		//everything at or after lo just shifted right by one
-		for (size_t j = 0; j < mainPos.size(); j++)
-			if (mainPos[j] >= lo)
-				mainPos[j]++;
-	}
-	/*
-	std::cout << "after insertion result: " << std::endl;
-	for (size_t i = 0; i < _resultV.size(); i++){
-		std::cout  << _resultV[i] << std::endl;
-	}
-	*/
-}
-
-void PmergeMe::runVector(int &Comparisons){
-	// if size == 1
-		//base case, return
-
-	//create pairs
-	//save odd element
-	//recursively sort main
-	//reorder Pend
-	//insert pend into result
-
-	//return vector
-	_main = mergeSortVector(_main, Comparisons);
-	reOrderPend();
-	insertPendIntoResult(Comparisons);
-
-	std::cout << "ordered with Vectors: ";
-	for (size_t i = 0; i < _resultV.size(); i++){
-		std::cout  << _resultV[i] << " ";
-	}
-	std::cout << std::endl;
-}
-
-/*
-funktion merge(linkeListe, rechteListe);
-  neueListe
-  solange (linkeListe und rechteListe nicht leer)
-       falls (erstes Element der linkeListe <= erstes Element der rechteListe)
-       dann füge erstes Element linkeListe in die neueListe hinten ein und entferne es aus linkeListe
-       sonst füge erstes Element rechteListe in die neueListe hinten ein und entferne es aus rechteListe
-  solange_ende
-  solange (linkeListe nicht leer)
-       füge erstes Element linkeListe in die neueListe hinten ein und entferne es aus linkeListe
-  solange_ende
-  solange (rechteListe nicht leer)
-       füge erstes Element rechteListe in die neueListe hinten ein und entferne es aus rechteListe
-  solange_ende
-  antworte neueListe
-*/
-std::vector<std::pair <unsigned int, int> > PmergeMe::mergeVector(std::vector<std::pair<unsigned int, int> > Left, std::vector<std::pair <unsigned int, int> > Right, int &Comparisons){
-	std::vector< std::pair<unsigned int, int> > result;
-	while (!Left.empty() && !Right.empty()){
-		if (Left.front().second <= Right.front().second){
-			result.push_back(Left.front());
-			Left.erase(Left.begin());
-		}
-		else{
-			result.push_back(Right.front());
-			Right.erase(Right.begin());
-		}
+    // group into pairs, find the larger element, and prepare the unsorted main chain
+    for (size_t i = 1; i < inLen; i += 2) {
+        if (Incoming[i - 1] > Incoming[i]) {
+            pairs.push_back(std::make_pair(Incoming[i - 1], Incoming[i]));
+            main_unsorted.push_back(Incoming[i - 1]);
+        } else {
+            pairs.push_back(std::make_pair(Incoming[i], Incoming[i - 1]));
+            main_unsorted.push_back(Incoming[i]);
+        }
 		Comparisons++;
-	}
-	//one of the lists is empty now
-	while (!Left.empty()){
-		result.push_back(Left.front());
-		Left.erase(Left.begin());
-	}
-	while (!Right.empty()){
-		result.push_back(Right.front());
-		Right.erase(Right.begin());
-	}
-	return result;
+    }
+
+    // Recursively sort the main
+    std::vector<int> main = sortVector(main_unsorted, Comparisons);
+
+    // Reorder the pend chain to match the newly sorted main chain
+    std::vector<int> pend;
+    std::vector<bool> used_pairs(pairs.size(), false);
+
+    for (size_t i = 0; i < main.size(); i++) {
+        for (size_t j = 0; j < pairs.size(); j++) {
+            if (!used_pairs[j] && pairs[j].first == main[i]) {
+                pend.push_back(pairs[j].second);
+                used_pairs[j] = true;
+                break;
+            }
+        }
+    }
+
+    // Handle an odd leftover element by appending it to the pend chain
+    if (inLen % 2 != 0) {
+        pend.push_back(Incoming[inLen - 1]);
+    }
+
+    // Insert Pend into Main following Jacobsthal order
+    return insertPendIntoResult(Comparisons, main, pend);
 }
 
-
-/*
-funktion mergesort(liste);
-  falls (Größe von liste <= 1) dann antworte liste
-  sonst
-     halbiere die liste in linkeListe, rechteListe
-     linkeListe = mergesort(linkeListe)
-     rechteListe = mergesort(rechteListe)
-     antworte merge(linkeListe, rechteListe)
-*/
-std::vector<std::pair <unsigned int, int> > PmergeMe::mergeSortVector(std::vector<std::pair<unsigned int, int> >Input, int &Comparisons){
-	if (Input.size() <= 1)
-		return Input;
-
-	size_t middle = Input.size() / 2;
-	//endpoint in constructor is exclusive!
-	std::vector<std::pair <unsigned int, int> > left(Input.begin(), Input.begin() + middle);
-	std::vector<std::pair <unsigned int, int> > right(Input.begin() + middle, Input.end());
-
-	left = mergeSortVector(left, Comparisons);
-	right = mergeSortVector(right, Comparisons);
-
-	return mergeVector(left, right, Comparisons);
-}
 
 //STATIC HELPERS
 
@@ -361,12 +214,4 @@ int PmergeMe::worstCaseComparisons(int nb){
 		sum += ceil((log(3*k) / log(2)) - 2);
 	}
 	return sum;
-}
-
-void PmergeMe::printBefore(int argc, char **argv){
-	std::cout << "before sorting: " ;
-	for (int i = 1; i < argc; i++){
-		std::cout << argv[i] << " ";
-	}
-	std::cout << std::endl;	
 }
