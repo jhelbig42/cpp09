@@ -202,17 +202,6 @@ void PmergeMe::reOrderPend(){
 	_pendV = newPend;
 }
 
-void PmergeMe::reOrderPendL(){
-	std::list<int> newPend;
-	for (std::list< std::pair<std::list<int>::iterator, int> >::iterator it = _mainL.begin(); it != _mainL.end(); it++){
-		newPend.push_back(pendingOfL(*it));
-	}
-	//if there where odd elements: it was pushed last during parsing, so it's
-	//still the last element of the original _pendL
-	if (_pendL.size() > _mainL.size())
-		newPend.push_back(_pendL.back());
-	_pendL = newPend;
-}
 
 void PmergeMe::insertPendIntoResult(int &Comparisons){
 	//b0 first to be _resultV[0]
@@ -275,77 +264,17 @@ void PmergeMe::insertPendIntoResult(int &Comparisons){
 	*/
 }
 
-//the real fork from insertPendIntoResult: mainPos tracks iterators into
-//_resultL instead of indices. List insertion never invalidates other
-//iterators, so those tracked positions stay correct for free after every
-//insert - no "shift everything >= lo" loop needed.
-//The binary search itself degrades to O(n) per step (advancing to the
-//midpoint each time, since a list has no random access), but Comparisons
-//only counts the value comparison, not the traversal, so the count stays
-//identical to the vector run.
-void PmergeMe::insertPendIntoResultL(int &Comparisons){
-	//b0 first to be _resultL's first element
-	_resultL.push_back(_pendL.front());
-	//insert whole main chain
-	for (std::list< std::pair<std::list<int>::iterator, int> >::iterator it = _mainL.begin(); it != _mainL.end(); it++){
-		_resultL.push_back(it->second);
-	}
-
-	//track the CURRENT position of each original _mainL element
-	std::vector<std::list<int>::iterator> mainPos(_mainL.size());
-	std::list<int>::iterator posIt = _resultL.begin();
-	++posIt; // skip b0
-	for (size_t i = 0; i < _mainL.size(); i++){
-		mainPos[i] = posIt;
-		++posIt;
-	}
-
-	//figure insertion sequence out
-	_jacobsthalSequence = createJacobsthal(_pendL.size());
-	_insertionOrder = createInsertionOrder(_jacobsthalSequence, _pendL.size());
-
-	//insert pend into result using BINARY insertion Sort
-	int insertMax = _insertionOrder.size();
-	int toInsert;
-	unsigned int index;
-	for (int i = 0; i < insertMax; i++){
-		index = _insertionOrder[i];
-
-		std::list<int>::iterator toInsertIt = _pendL.begin();
-		std::advance(toInsertIt, index);
-		toInsert = *toInsertIt;
-
-		// if there is an originally unpaired element, it can fit anywhere
-		// if it was paired before, it has an upper bound given by index
-		std::list<int>::iterator bound;
-		if (index < mainPos.size())
-			bound = mainPos[index];
-		else
-			bound = _resultL.end();
-
-		unsigned int lo = 0;
-		unsigned int hi = std::distance(_resultL.begin(), bound);
-		while (lo < hi){
-			unsigned int mid = lo + (hi - lo) / 2;
-			std::list<int>::iterator midIt = _resultL.begin();
-			std::advance(midIt, mid);
-			if (*midIt < toInsert)
-				lo = mid + 1;
-			else
-				hi = mid;
-			Comparisons++;
-		}
-
-		std::list<int>::iterator insertIt = _resultL.begin();
-		std::advance(insertIt, lo);
-		_resultL.insert(insertIt, toInsert);
-
-		//no positions to fix up: every iterator in mainPos still points at
-		//its original node regardless of where toInsert just landed
-	}
-}
-
 void PmergeMe::runVector(int &Comparisons){
+	// if size == 1
+		//base case, return
+
+	//create pairs
+	//save odd element
+	//recursively sort main
+	//reorder Pend
+	//insert pend into result
+
+	//return vector
 	_main = mergeSortVector(_main, Comparisons);
 	reOrderPend();
 	insertPendIntoResult(Comparisons);
@@ -353,18 +282,6 @@ void PmergeMe::runVector(int &Comparisons){
 	std::cout << "ordered with Vectors: ";
 	for (size_t i = 0; i < _resultV.size(); i++){
 		std::cout  << _resultV[i] << " ";
-	}
-	std::cout << std::endl;
-}
-
-void PmergeMe::runList(int &Comparisons){
-	_mainL = mergeSortList(_mainL, Comparisons);
-	reOrderPendL();
-	insertPendIntoResultL(Comparisons);
-
-	std::cout << "ordered with Lists: ";
-	for (std::list<int>::iterator it = _resultL.begin(); it != _resultL.end(); it++){
-		std::cout << *it << " ";
 	}
 	std::cout << std::endl;
 }
@@ -410,23 +327,6 @@ std::vector<std::pair <unsigned int, int> > PmergeMe::mergeVector(std::vector<st
 	return result;
 }
 
-//same comparison logic as mergeVector, but splice moves a node in O(1)
-//instead of the O(n) shift that vector's erase(begin()) does - the actual
-//win of using a list here
-std::list<std::pair <std::list<int>::iterator, int> > PmergeMe::mergeList(std::list<std::pair<std::list<int>::iterator, int> > &Left, std::list<std::pair <std::list<int>::iterator, int> > &Right, int &Comparisons){
-	std::list< std::pair<std::list<int>::iterator, int> > result;
-	while (!Left.empty() && !Right.empty()){
-		if (Left.front().second <= Right.front().second)
-			result.splice(result.end(), Left, Left.begin());
-		else
-			result.splice(result.end(), Right, Right.begin());
-		Comparisons++;
-	}
-	//one of the lists is empty now
-	result.splice(result.end(), Left);
-	result.splice(result.end(), Right);
-	return result;
-}
 
 /*
 funktion mergesort(liste);
@@ -450,38 +350,6 @@ std::vector<std::pair <unsigned int, int> > PmergeMe::mergeSortVector(std::vecto
 	right = mergeSortVector(right, Comparisons);
 
 	return mergeVector(left, right, Comparisons);
-}
-
-/*
-Input is taken by reference and consumed: the back half is spliced out into
-right (O(1) per node, no copies), leaving Input holding just the left half,
-which recurses in place. This is what makes the splice-based split in TODO
-item 4 actually pay off - passing by value like mergeSortVector does would
-force a full node-by-node copy on every recursive call.
-*/
-std::list<std::pair <std::list<int>::iterator, int> > PmergeMe::mergeSortList(std::list<std::pair<std::list<int>::iterator, int> > &Input, int &Comparisons){
-	if (Input.size() <= 1)
-		return Input;
-
-	//tortoise/hare: find the middle in a single O(n) pass
-	std::list< std::pair<std::list<int>::iterator, int> >::iterator slow = Input.begin();
-	std::list< std::pair<std::list<int>::iterator, int> >::iterator fast = Input.begin();
-	while (fast != Input.end()){
-		++fast;
-		if (fast == Input.end())
-			break;
-		++fast;
-		++slow;
-	}
-
-	std::list< std::pair<std::list<int>::iterator, int> > right;
-	right.splice(right.begin(), Input, slow, Input.end());
-	//Input now holds only the left half
-
-	std::list< std::pair<std::list<int>::iterator, int> > left = mergeSortList(Input, Comparisons);
-	right = mergeSortList(right, Comparisons);
-
-	return mergeList(left, right, Comparisons);
 }
 
 //STATIC HELPERS
