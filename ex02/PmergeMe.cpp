@@ -192,7 +192,6 @@ std::vector<PmergeMe::Element> PmergeMe::insertPendIntoResultVect(int &Compariso
     return result;
 }
 
-
 std::list<PmergeMe::Element> PmergeMe::insertPendIntoResultList(int &Comparisons, std::list<PmergeMe::Element> &Main, std::list<PmergeMe::Element> &Pend)
 {
     if (Pend.empty())
@@ -228,8 +227,8 @@ std::list<PmergeMe::Element> PmergeMe::insertPendIntoResultList(int &Comparisons
 
 		// Find "Pend[index]" without std::advance
 		std::list<PmergeMe::Element>::iterator toInsertIt = Pend.begin();
-		for (size_t j = 0; j < index; j++)
-			++toInsertIt;
+		
+		std::advance(toInsertIt, index);
 
 		toInsert = *toInsertIt;
 
@@ -240,7 +239,7 @@ std::list<PmergeMe::Element> PmergeMe::insertPendIntoResultList(int &Comparisons
 		if (index < mainPos.size())
 			bound = mainPos[index];
 		else
-			bound = result.size() - 1;
+			bound = result.size();
 
 		unsigned int lo = 0;
 		unsigned int hi = bound;
@@ -250,23 +249,10 @@ std::list<PmergeMe::Element> PmergeMe::insertPendIntoResultList(int &Comparisons
 			unsigned int mid = lo + (hi - lo) / 2;
 
 			// finding middle of list
-			std::list<PmergeMe::Element>::iterator slow = result.begin();
-			std::list<PmergeMe::Element>::iterator fast = result.begin();
+			std::list<PmergeMe::Element>::iterator midIt = result.begin();
 
-			unsigned int steps = mid;
-
-			while (steps >= 2)
-			{
-				++fast;
-				++fast;
-				++slow;
-				steps -= 2;
-			}
-
-			if (steps == 1)
-				++slow;
-
-			std::list<PmergeMe::Element>::iterator midIt = slow;
+			for (unsigned int j = 0; j < mid; j++)
+    			++midIt;
 
 			Comparisons++;
 
@@ -278,10 +264,16 @@ std::list<PmergeMe::Element> PmergeMe::insertPendIntoResultList(int &Comparisons
 
 		std::list<PmergeMe::Element>::iterator insertIt = result.begin();
 
-		for (unsigned int j = 0; j < lo; j++)
-			++insertIt;
+		std::advance(insertIt, lo);
 
 		result.insert(insertIt, toInsert);
+
+		// Update positions of Main elements 
+        for (size_t j = 0; j < mainPos.size(); j++)
+        {
+            if (mainPos[j] >= lo)
+                mainPos[j]++;
+        }
 	}
 
 	return result;

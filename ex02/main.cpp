@@ -51,11 +51,11 @@ int main(int argc, char **argv){
 		std::list<int> result;
 		result = sorter.parseInputList(argc, argv);
 		
-		std::cout << "before Ordering: ";
-		for (std::list<int>::iterator it = result.begin(); it != result.end(); it++){
-			std::cout  << *it << " ";
-		}
-		std::cout << std::endl;
+		// std::cout << "before Ordering: ";
+		// for (std::list<int>::iterator it = result.begin(); it != result.end(); it++){
+		// 	std::cout  << *it << " ";
+		// }
+		// std::cout << std::endl;
 		
 		result = sorter.sortList(result, comparisons);
 
