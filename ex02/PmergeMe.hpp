@@ -47,7 +47,7 @@ class PmergeMe
 		std::vector<int> sortVector(std::vector<int> Incoming, int &Comparisons);
 
 	private:
-		std::vector<PmergeMe::Element> sortRecursive(const std::vector<PmergeMe::Element>& Incoming, int &Comparisons);
+		std::vector<PmergeMe::Element> sortVectRecursive(const std::vector<PmergeMe::Element>& Incoming, int &Comparisons);
 		std::vector<PmergeMe::Element> insertPendIntoResult(int &Comparisons, const std::vector<PmergeMe::Element>& Main, const std::vector<PmergeMe::Element>& Pend);
 
 		// Helper

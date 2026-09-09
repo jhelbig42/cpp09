@@ -169,7 +169,7 @@ std::vector<PmergeMe::Element> PmergeMe::insertPendIntoResult(int &Comparisons, 
 }
 
 
-std::vector<PmergeMe::Element> PmergeMe::sortRecursive(const std::vector<PmergeMe::Element>& Incoming, int &Comparisons){
+std::vector<PmergeMe::Element> PmergeMe::sortVectRecursive(const std::vector<PmergeMe::Element>& Incoming, int &Comparisons){
     size_t inLen = Incoming.size();
 
     if (inLen <= 1)
@@ -197,7 +197,7 @@ std::vector<PmergeMe::Element> PmergeMe::sortRecursive(const std::vector<PmergeM
         main_unsorted.push_back(p.main);
     }
 
-    std::vector<PmergeMe::Element> main = sortRecursive(main_unsorted, Comparisons);
+    std::vector<PmergeMe::Element> main = sortVectRecursive(main_unsorted, Comparisons);
 
 	//build pend chain, order depends on sorted main chain elements
     std::vector<PmergeMe::Element> pend;
