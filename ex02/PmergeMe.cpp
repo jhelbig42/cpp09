@@ -35,7 +35,6 @@ static void checkInputValue (long value){
 		throw PmergeMe::BadInput();
 }
 
-//_main saves the vector index of the corresponding _pend element for later access
 std::vector<int> PmergeMe::parseInputVector(int argc, char **argv){
 	int i;
 	long value1;
@@ -98,45 +97,29 @@ static std::vector<int> createInsertionOrder(std::vector<int> const &jacobsthal,
 	return order;
 }
 
-std::vector<PmergeMe::Element> PmergeMe::insertPendIntoResult(
-    int &Comparisons,
-    const std::vector<PmergeMe::Element>& Main,
-    const std::vector<PmergeMe::Element>& Pend)
+std::vector<PmergeMe::Element> PmergeMe::insertPendIntoResult(int &Comparisons, const std::vector<PmergeMe::Element>& Main, const std::vector<PmergeMe::Element>& Pend)
 {
     if (Pend.empty())
         return Main;
 
     std::vector<PmergeMe::Element> result;
 
-    // Pend[0] is the smaller element of the first pair,
-    // so we already know:
-    //
-    // Pend[0] < Main[0]
-    //
-    // This was established during the pairing comparison.
+    // Pend[0] is the smaller element of the first pair
     result.push_back(Pend[0]);
 
+	//creating the base main chain
     for (size_t i = 0; i < Main.size(); i++)
         result.push_back(Main[i]);
 
     // Track the CURRENT position of each Main element in result.
-    //
-    // Main[0] is initially at position 1 because Pend[0]
-    // was inserted at position 0.
     std::vector<unsigned int> mainPos(Main.size());
-
     for (size_t i = 0; i < Main.size(); i++)
         mainPos[i] = i + 1;
 
     // Generate Jacobsthal insertion order.
-    std::vector<int> jacobsthalSeq =
-        createJacobsthal(Pend.size());
+    std::vector<int> jacobsthalSeq = createJacobsthal(Pend.size());
 
-    std::vector<int> insertionOrder =
-        createInsertionOrder(
-            jacobsthalSeq,
-            Pend.size()
-        );
+    std::vector<int> insertionOrder = createInsertionOrder(jacobsthalSeq, Pend.size());
 
     // Insert each Pend element according to Jacobsthal order.
     for (size_t i = 0; i < insertionOrder.size(); i++)
@@ -149,11 +132,8 @@ std::vector<PmergeMe::Element> PmergeMe::insertPendIntoResult(
 
         PmergeMe::Element toInsert = Pend[index];
 
-        // For a normal paired Pend element, only search up to
-        // the position of its corresponding Main element.
-        //
-        // The odd leftover has no corresponding Main element,
-        // so it searches the whole result.
+        // only search to insertion Position up to the current position of the corresponding main chain element
+		// the odd element could be anywhere
         unsigned int bound;
 
         if (index < mainPos.size())
@@ -167,24 +147,17 @@ std::vector<PmergeMe::Element> PmergeMe::insertPendIntoResult(
         // Binary search.
         while (lo < hi)
         {
-            unsigned int mid =
-                lo + (hi - lo) / 2;
-
-            // THIS is an actual comparison between input values.
+            unsigned int mid = lo + (hi - lo) / 2;
             Comparisons++;
-
             if (result[mid].value < toInsert.value)
                 lo = mid + 1;
             else
                 hi = mid;
         }
 
-        result.insert(
-            result.begin() + lo,
-            toInsert
-        );
+        result.insert(result.begin() + lo, toInsert);
 
-        // Update positions of Main elements that were shifted.
+        // Update positions of Main elements 
         for (size_t j = 0; j < mainPos.size(); j++)
         {
             if (mainPos[j] >= lo)
@@ -196,10 +169,7 @@ std::vector<PmergeMe::Element> PmergeMe::insertPendIntoResult(
 }
 
 
-std::vector<PmergeMe::Element> PmergeMe::sortRecursive(
-    const std::vector<PmergeMe::Element>& Incoming,
-    int &Comparisons)
-{
+std::vector<PmergeMe::Element> PmergeMe::sortRecursive(const std::vector<PmergeMe::Element>& Incoming, int &Comparisons){
     size_t inLen = Incoming.size();
 
     if (inLen <= 1)
@@ -208,129 +178,54 @@ std::vector<PmergeMe::Element> PmergeMe::sortRecursive(
     std::vector<Pair> pairs;
     std::vector<PmergeMe::Element> main_unsorted;
 
-    // ------------------------------------------------------------
-    // STEP 1:
-    // Pair the elements.
-    //
-    // For every pair:
-    //
-    //     main = larger
-    //     pend = smaller
-    //
-    // The comparison here IS counted.
-    // ------------------------------------------------------------
-
-    for (size_t i = 1; i < inLen; i += 2)
-    {
+	//create sorted pairs
+    for (size_t i = 1; i < inLen; i += 2){
         Pair p;
 
-        if (Incoming[i - 1].value > Incoming[i].value)
-        {
+		Comparisons++;
+        if (Incoming[i - 1].value > Incoming[i].value){
             p.main = Incoming[i - 1];
             p.pend = Incoming[i];
         }
-        else
-        {
+        else{
             p.main = Incoming[i];
             p.pend = Incoming[i - 1];
         }
-
         pairs.push_back(p);
 
-        // Only the larger element goes into the recursive Main.
+        // larger elements need to be recursively sorted
         main_unsorted.push_back(p.main);
-
-        // One actual integer comparison.
-        Comparisons++;
     }
 
-    // ------------------------------------------------------------
-    // STEP 2:
-    // Recursively sort the Main elements.
-    //
-    // IMPORTANT:
-    // The PmergeMe::Element contains both:
-    //
-    //     value
-    //     id
-    //
-    // so the identity of the original element survives recursion.
-    // ------------------------------------------------------------
+    std::vector<PmergeMe::Element> main = sortRecursive(main_unsorted, Comparisons);
 
-    std::vector<PmergeMe::Element> main =
-        sortRecursive(
-            main_unsorted,
-            Comparisons
-        );
-
-    // ------------------------------------------------------------
-    // STEP 3:
-    // Repair/rebuild Pend according to the newly sorted Main.
-    //
-    // We DO NOT compare integer values here.
-    //
-    // We compare IDs, which are bookkeeping only.
-    //
-    // This preserves:
-    //
-    //     8  -> 3
-    //     10 -> 5
-    //     7  -> 2
-    //
-    // even after the recursive Main has been reordered.
-    // ------------------------------------------------------------
-
+	//build pend chain, order depends on sorted main chain elements
     std::vector<PmergeMe::Element> pend;
 
-    for (size_t i = 0; i < main.size(); i++)
-    {
-        for (size_t j = 0; j < pairs.size(); j++)
-        {
-            if (pairs[j].main.id == main[i].id)
-            {
+    for (size_t i = 0; i < main.size(); i++){
+        for (size_t j = 0; j < pairs.size(); j++){
+            if (main[i].id == pairs[j].main.id){ // does just compare ids, not values
                 pend.push_back(pairs[j].pend);
                 break;
             }
         }
     }
 
-    // ------------------------------------------------------------
-    // STEP 4:
-    // If there was an odd element, append it to Pend.
-    //
-    // It has no corresponding Main element, so later it will
-    // be inserted into the complete result.
-    // ------------------------------------------------------------
-
+    // add odd element to pend
     if (inLen % 2 != 0)
         pend.push_back(Incoming[inLen - 1]);
 
-    // ------------------------------------------------------------
-    // STEP 5:
-    // Insert Pend into the sorted Main using Jacobsthal order.
-    // ------------------------------------------------------------
 
-    return insertPendIntoResult(
-        Comparisons,
-        main,
-        pend
-    );
+    return insertPendIntoResult(Comparisons, main, pend);
 }
 
 
 std::vector<int> PmergeMe::sortVector(std::vector<int> Incoming, int &Comparisons)
 {
-    // ------------------------------------------------------------
-    // Give every original element a permanent ID.
-    //
-    // The ID is ONLY for bookkeeping.
-    // It is never used to determine sorting order.
-    // ------------------------------------------------------------
-
+	//give ids to values - just happening once at the start
     std::vector<PmergeMe::Element> elements;
 
-    for (size_t i = 0; i < Incoming.size(); i++)
-    {
+    for (size_t i = 0; i < Incoming.size(); i++){
         PmergeMe::Element e;
         e.value = Incoming[i];
         e.id = i;
@@ -341,6 +236,7 @@ std::vector<int> PmergeMe::sortVector(std::vector<int> Incoming, int &Comparison
 
     std::vector<int> result;
 
+	// just return a vector of values
     for (size_t i = 0; i < sorted.size(); i++)
         result.push_back(sorted[i].value);
 

@@ -30,10 +30,6 @@ class PmergeMe
 		// Static helpers
 		static int worstCaseComparisons(int nb);
 
-		// --------------------------------------------------------
-		// Ford-Johnson types
-		// --------------------------------------------------------
-
 		struct Element
 		{
 			int value;
@@ -48,11 +44,7 @@ class PmergeMe
 
 		//vector
 		std::vector<int> parseInputVector(int argc, char **argv);
-
-		std::vector<int> sortVector(
-			std::vector<int> Incoming,
-			int &Comparisons
-		);
+		std::vector<int> sortVector(std::vector<int> Incoming, int &Comparisons);
 
 	private:
 		std::vector<PmergeMe::Element> sortRecursive(const std::vector<PmergeMe::Element>& Incoming, int &Comparisons);
