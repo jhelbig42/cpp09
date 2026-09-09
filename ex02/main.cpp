@@ -43,7 +43,38 @@ int main(int argc, char **argv){
 		return (1);
 	}
 	// LIST implementation
+	try{
+		PmergeMe sorter;
+		clock_t t = clock();
+		int comparisons = 0;
 
+		std::list<int> result;
+		result = sorter.parseInputList(argc, argv);
+		
+		std::cout << "before Ordering: ";
+		for (std::list<int>::iterator it = result.begin(); it != result.end(); it++){
+			std::cout  << *it << " ";
+		}
+		std::cout << std::endl;
+		
+		result = sorter.sortList(result, comparisons);
+
+		t = clock() - t;
+		
+		std::cout << "after Ordering: ";
+		for (std::list<int>::iterator it = result.begin(); it != result.end(); it++){
+		std::cout  << *it << " ";
+		}
+		std::cout << std::endl;
+		std::cout << "comparisons using lists: " << comparisons << std::endl;
+		std::cout << "time it took with lists: " << ((float)t)/CLOCKS_PER_SEC
+		<< " seconds" <<std::endl;
+	
+	}
+	catch (std::exception &e){
+		std::cerr << e.what() << std::endl;
+		return (1);
+	}
 	return (0);
 }
 

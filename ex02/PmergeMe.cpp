@@ -59,6 +59,30 @@ std::vector<int> PmergeMe::parseInputVector(int argc, char **argv){
 	return (start);
 }
 
+std::list<int> PmergeMe::parseInputList(int argc, char **argv){
+	int i;
+	long value1;
+	std::stringstream input;
+	std::list<int> start;
+	i = 1;
+	try{
+		while (i < argc){
+			input.str(argv[i]);
+			input >> value1;
+			if (input.fail() || !input.eof())
+				throw PmergeMe::BadInput();
+			checkInputValue(value1);
+			input.clear();
+			start.push_back(value1);
+			i++;
+		}
+	}
+	catch (std::exception &e){
+		throw PmergeMe::BadInput();
+	}
+	return (start);
+}
+
 
 /*
 sequence starts with 0 and 1, then each following number is found by 
@@ -97,7 +121,7 @@ static std::vector<int> createInsertionOrder(std::vector<int> const &jacobsthal,
 	return order;
 }
 
-std::vector<PmergeMe::Element> PmergeMe::insertPendIntoResult(int &Comparisons, const std::vector<PmergeMe::Element>& Main, const std::vector<PmergeMe::Element>& Pend)
+std::vector<PmergeMe::Element> PmergeMe::insertPendIntoResultVect(int &Comparisons, const std::vector<PmergeMe::Element>& Main, const std::vector<PmergeMe::Element>& Pend)
 {
     if (Pend.empty())
         return Main;
@@ -169,6 +193,100 @@ std::vector<PmergeMe::Element> PmergeMe::insertPendIntoResult(int &Comparisons, 
 }
 
 
+std::list<PmergeMe::Element> PmergeMe::insertPendIntoResultList(int &Comparisons, std::list<PmergeMe::Element> &Main, std::list<PmergeMe::Element> &Pend)
+{
+    if (Pend.empty())
+        return Main;
+
+    std::list<PmergeMe::Element> result;
+
+    // Pend[0] is the smaller element of the first pair
+    result.push_back(Pend.front());
+
+	//creating the base main chain
+	for (std::list<PmergeMe::Element>::iterator it = Main.begin(); it != Main.end(); it++)
+        result.push_back(*it);
+
+    // Track the CURRENT position of each Main element in result.
+    std::vector<unsigned int> mainPos(Main.size());
+    for (size_t i = 0; i < Main.size(); i++)
+        mainPos[i] = i + 1;
+
+    // Generate Jacobsthal insertion order.
+    std::vector<int> jacobsthalSeq = createJacobsthal(Pend.size());
+
+    std::vector<int> insertionOrder = createInsertionOrder(jacobsthalSeq, Pend.size());
+
+    // Insert each Pend element according to Jacobsthal order.
+    //insert pend into result using BINARY insertion Sort
+	int insertMax = insertionOrder.size();
+	PmergeMe::Element toInsert;
+	unsigned int index;
+	for (int i = 0; i < insertMax; i++)
+	{
+		index = insertionOrder[i];
+
+		// Find "Pend[index]" without std::advance
+		std::list<PmergeMe::Element>::iterator toInsertIt = Pend.begin();
+		for (size_t j = 0; j < index; j++)
+			++toInsertIt;
+
+		toInsert = *toInsertIt;
+
+		// If there is an originally unpaired element, it can fit anywhere.
+		// If it was paired before, it has an upper bound given by index.
+		unsigned int bound;
+
+		if (index < mainPos.size())
+			bound = mainPos[index];
+		else
+			bound = result.size() - 1;
+
+		unsigned int lo = 0;
+		unsigned int hi = bound;
+
+		while (lo < hi)
+		{
+			unsigned int mid = lo + (hi - lo) / 2;
+
+			// finding middle of list
+			std::list<PmergeMe::Element>::iterator slow = result.begin();
+			std::list<PmergeMe::Element>::iterator fast = result.begin();
+
+			unsigned int steps = mid;
+
+			while (steps >= 2)
+			{
+				++fast;
+				++fast;
+				++slow;
+				steps -= 2;
+			}
+
+			if (steps == 1)
+				++slow;
+
+			std::list<PmergeMe::Element>::iterator midIt = slow;
+
+			Comparisons++;
+
+			if (midIt->value < toInsert.value)
+				lo = mid + 1;
+			else
+				hi = mid;
+		}
+
+		std::list<PmergeMe::Element>::iterator insertIt = result.begin();
+
+		for (unsigned int j = 0; j < lo; j++)
+			++insertIt;
+
+		result.insert(insertIt, toInsert);
+	}
+
+	return result;
+}
+
 std::vector<PmergeMe::Element> PmergeMe::sortVectRecursive(const std::vector<PmergeMe::Element>& Incoming, int &Comparisons){
     size_t inLen = Incoming.size();
 
@@ -216,9 +334,66 @@ std::vector<PmergeMe::Element> PmergeMe::sortVectRecursive(const std::vector<Pme
         pend.push_back(Incoming[inLen - 1]);
 
 
-    return insertPendIntoResult(Comparisons, main, pend);
+    return insertPendIntoResultVect(Comparisons, main, pend);
 }
 
+std::list<PmergeMe::Element> PmergeMe::sortListRecursive(std::list<PmergeMe::Element>& Incoming, int &Comparisons){
+    size_t inLen = Incoming.size();
+
+    if (inLen <= 1)
+        return Incoming;
+
+    std::list<Pair> pairs;
+    std::list<PmergeMe::Element> main_unsorted;
+
+	//create sorted pairs
+	for (std::list<PmergeMe::Element>::iterator it = Incoming.begin(); it != Incoming.end(); it++)
+    {
+        Pair p;
+		PmergeMe::Element elem1 = *it;
+		//make sure next list element exists
+		it++;
+		if (it == Incoming.end())
+			break;
+		PmergeMe::Element elem2 = *it;
+
+		Comparisons++;
+        if (elem1.value > elem2.value){
+            p.main = elem1;
+            p.pend = elem2;
+        }
+        else{
+            p.main = elem2;
+            p.pend = elem1;
+        }
+        pairs.push_back(p);
+
+        // larger elements need to be recursively sorted
+        main_unsorted.push_back(p.main);
+    }
+
+    std::list<PmergeMe::Element> main = sortListRecursive(main_unsorted, Comparisons);
+
+	//build pend chain, order depends on sorted main chain elements
+    std::list<PmergeMe::Element> pend;
+
+	for (std::list<PmergeMe::Element>::iterator it = main.begin(); it != main.end(); it++)
+    {
+		for (std::list<PmergeMe::Pair>::iterator itP = pairs.begin(); itP != pairs.end(); itP++)
+        {
+            if ((*it).id == (*itP).main.id){ // does just compare ids, not values
+                pend.push_back((*itP).pend);
+                break;
+            }
+        }
+    }
+
+    // add odd element to pend
+    if (inLen % 2 != 0)
+        pend.push_back(Incoming.back());
+
+    return insertPendIntoResultList(Comparisons, main, pend);
+}
 
 std::vector<int> PmergeMe::sortVector(std::vector<int> Incoming, int &Comparisons)
 {
@@ -232,7 +407,7 @@ std::vector<int> PmergeMe::sortVector(std::vector<int> Incoming, int &Comparison
         elements.push_back(e);
     }
 
-    std::vector<PmergeMe::Element> sorted = sortRecursive(elements, Comparisons);
+    std::vector<PmergeMe::Element> sorted = sortVectRecursive(elements, Comparisons);
 
     std::vector<int> result;
 
@@ -242,6 +417,33 @@ std::vector<int> PmergeMe::sortVector(std::vector<int> Incoming, int &Comparison
 
     return result;
 }
+
+std::list<int> PmergeMe::sortList(std::list<int> Incoming, int &Comparisons)
+{
+	//give ids to values - just happening once at the start
+    std::list<PmergeMe::Element> elements;
+
+	int i = 0;
+    for (std::list<int>::iterator it = Incoming.begin(); it != Incoming.end(); ++it){
+        PmergeMe::Element e;
+        e.value = *it;
+        e.id = i;
+        elements.push_back(e);
+		i++;
+    }
+
+    std::list<PmergeMe::Element> sorted = sortListRecursive(elements, Comparisons);
+
+    std::list<int> result;
+
+	for (std::list<PmergeMe::Element>::iterator it = sorted.begin(); it != sorted.end(); ++it){
+		result.push_back((*it).value);
+    }
+
+    return result;
+
+}
+
 
 //STATIC HELPERS
 //sum(ceil_log2(3 * k) - 2 for k in range(1, n + 1))

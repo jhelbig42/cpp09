@@ -45,10 +45,18 @@ class PmergeMe
 		//vector
 		std::vector<int> parseInputVector(int argc, char **argv);
 		std::vector<int> sortVector(std::vector<int> Incoming, int &Comparisons);
+		//lists
+		std::list<int> parseInputList(int argc, char **argv);
+		std::list<int> sortList(std::list<int> Incoming, int &Comparisons);
 
 	private:
+		//vector
 		std::vector<PmergeMe::Element> sortVectRecursive(const std::vector<PmergeMe::Element>& Incoming, int &Comparisons);
-		std::vector<PmergeMe::Element> insertPendIntoResult(int &Comparisons, const std::vector<PmergeMe::Element>& Main, const std::vector<PmergeMe::Element>& Pend);
+		std::vector<PmergeMe::Element> insertPendIntoResultVect(int &Comparisons, const std::vector<PmergeMe::Element>& Main, const std::vector<PmergeMe::Element>& Pend);
+		//list
+		std::list<PmergeMe::Element> sortListRecursive(std::list<PmergeMe::Element>& Incoming, int &Comparisons);
+		std::list<PmergeMe::Element> insertPendIntoResultList(int &Comparisons, std::list<PmergeMe::Element> &Main, std::list<PmergeMe::Element> &Pend);
+
 
 		// Helper
 		std::vector<int> _jacobsthalSequence;
