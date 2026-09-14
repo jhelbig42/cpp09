@@ -216,8 +216,7 @@ std::list<PmergeMe::Element> PmergeMe::insertPendIntoResultList(int &Comparisons
 
     std::vector<int> insertionOrder = createInsertionOrder(jacobsthalSeq, Pend.size());
 
-    // Insert each Pend element according to Jacobsthal order.
-    //insert pend into result using BINARY insertion Sort
+    // Insert each Pend element according to Jacobsthal order
 	int insertMax = insertionOrder.size();
 	PmergeMe::Element toInsert;
 	unsigned int index;
@@ -225,7 +224,6 @@ std::list<PmergeMe::Element> PmergeMe::insertPendIntoResultList(int &Comparisons
 	{
 		index = insertionOrder[i];
 
-		// Find "Pend[index]" without std::advance
 		std::list<PmergeMe::Element>::iterator toInsertIt = Pend.begin();
 		
 		std::advance(toInsertIt, index);
@@ -251,8 +249,7 @@ std::list<PmergeMe::Element> PmergeMe::insertPendIntoResultList(int &Comparisons
 			// finding middle of list
 			std::list<PmergeMe::Element>::iterator midIt = result.begin();
 
-			for (unsigned int j = 0; j < mid; j++)
-    			++midIt;
+			std::advance(midIt, mid);
 
 			Comparisons++;
 
@@ -433,7 +430,6 @@ std::list<int> PmergeMe::sortList(std::list<int> Incoming, int &Comparisons)
     }
 
     return result;
-
 }
 
 

@@ -8,7 +8,7 @@ int main(int argc, char **argv){
 		return (1);
 	}
 
-	std::cout << "worst case comparisons: " << PmergeMe::worstCaseComparisons(argc - 1) << std::endl;
+	//std::cout << "worst case comparisons: " << PmergeMe::worstCaseComparisons(argc - 1) << std::endl;
 
 	try{
 		PmergeMe sorter;
@@ -18,23 +18,23 @@ int main(int argc, char **argv){
 		std::vector<int> result;
 		result = sorter.parseInputVector(argc, argv);
 		
-		// std::cout << "before Ordering: ";
-		// for (size_t i = 0; i < result.size(); i++){
-		// 	std::cout  << result[i] << " ";
-		// }
-		// std::cout << std::endl;
-		
+		std::cout << "before: ";
+		for (size_t i = 0; i < result.size(); i++){
+			std::cout  << result[i] << " ";
+		}
+		std::cout << std::endl;
+				
 		result = sorter.sortVector(result, comparisons);
 
 		t = clock() - t;
 		
-		// std::cout << "after Ordering: ";
-		// for (size_t i = 0; i < result.size(); i++){
-		// 	std::cout  << result[i] << " ";
-		// }
-		// std::cout << std::endl;
-		std::cout << "comparisons using vector: " << comparisons << std::endl;
-		std::cout << "time it took with vectors: " << ((float)t)/CLOCKS_PER_SEC
+		std::cout << "after: ";
+		for (size_t i = 0; i < result.size(); i++){
+			std::cout  << result[i] << " ";
+		}
+		std::cout << std::endl;
+		//std::cout << "comparisons using vector: " << comparisons << std::endl;
+		std::cout << "time it took using std::vector: " << ((float)t)/CLOCKS_PER_SEC
 			<< " seconds" <<std::endl;
 		
 	}
@@ -66,8 +66,8 @@ int main(int argc, char **argv){
 		// std::cout  << *it << " ";
 		// }
 		// std::cout << std::endl;
-		std::cout << "comparisons using lists: " << comparisons << std::endl;
-		std::cout << "time it took with lists: " << ((float)t)/CLOCKS_PER_SEC
+		//std::cout << "comparisons using lists: " << comparisons << std::endl;
+		std::cout << "time it took using std::list: " << ((float)t)/CLOCKS_PER_SEC
 		<< " seconds" <<std::endl;
 	
 	}
